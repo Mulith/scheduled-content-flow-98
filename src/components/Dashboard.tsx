@@ -45,10 +45,10 @@ export const Dashboard = () => {
       <div className="container mx-auto px-4 py-8">
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-black/40 border-white/10">
-            <TabsTrigger value="overview" className="text-white data-[state=active]:bg-white/10 data-[state=active]:text-white">Overview</TabsTrigger>
-            <TabsTrigger value="channels" className="text-white data-[state=active]:bg-white/10 data-[state=active]:text-white">Channels</TabsTrigger>
-            <TabsTrigger value="billing" className="text-white data-[state=active]:bg-white/10 data-[state=active]:text-white">Billing</TabsTrigger>
-            <TabsTrigger value="account" className="text-white data-[state=active]:bg-white/10 data-[state=active]:text-white">Account</TabsTrigger>
+            <TabsTrigger value="overview" className="text-white">Overview</TabsTrigger>
+            <TabsTrigger value="channels" className="text-white">Channels</TabsTrigger>
+            <TabsTrigger value="billing" className="text-white">Billing</TabsTrigger>
+            <TabsTrigger value="account" className="text-white">Account</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">

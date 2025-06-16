@@ -1,11 +1,13 @@
 
+import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { LandingPage } from "@/components/LandingPage";
-import { useNavigate } from "react-router-dom";
+import { AuthPage } from "@/components/AuthPage";
+import { Dashboard } from "@/components/Dashboard";
 
 const Index = () => {
-  const { loading } = useAuth();
-  const navigate = useNavigate();
+  const [showAuth, setShowAuth] = useState(false);
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -15,7 +17,15 @@ const Index = () => {
     );
   }
 
-  return <LandingPage onGetStarted={() => navigate("/auth")} />;
+  if (user) {
+    return <Dashboard />;
+  }
+
+  if (showAuth) {
+    return <AuthPage onBack={() => setShowAuth(false)} />;
+  }
+
+  return <LandingPage onGetStarted={() => setShowAuth(true)} />;
 };
 
 export default Index;

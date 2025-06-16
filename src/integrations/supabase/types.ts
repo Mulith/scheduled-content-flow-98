@@ -36,54 +36,6 @@ export type Database = {
         }
         Relationships: []
       }
-      youtube_channels: {
-        Row: {
-          access_token: string
-          channel_handle: string | null
-          channel_id: string
-          channel_name: string
-          connected_at: string
-          id: string
-          refresh_token: string
-          subscriber_count: number | null
-          thumbnail_url: string | null
-          token_expires_at: string
-          updated_at: string
-          user_id: string
-          video_count: number | null
-        }
-        Insert: {
-          access_token: string
-          channel_handle?: string | null
-          channel_id: string
-          channel_name: string
-          connected_at?: string
-          id?: string
-          refresh_token: string
-          subscriber_count?: number | null
-          thumbnail_url?: string | null
-          token_expires_at: string
-          updated_at?: string
-          user_id: string
-          video_count?: number | null
-        }
-        Update: {
-          access_token?: string
-          channel_handle?: string | null
-          channel_id?: string
-          channel_name?: string
-          connected_at?: string
-          id?: string
-          refresh_token?: string
-          subscriber_count?: number | null
-          thumbnail_url?: string | null
-          token_expires_at?: string
-          updated_at?: string
-          user_id?: string
-          video_count?: number | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
