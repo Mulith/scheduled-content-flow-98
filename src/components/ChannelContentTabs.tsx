@@ -53,45 +53,45 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Channel Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
         <div className="flex items-center space-x-4">
-          <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
             {channel.socialAccount.platform === "youtube" ? (
-              <Youtube className="w-6 h-6 text-white" />
+              <Youtube className="w-5 h-5 md:w-6 md:h-6 text-white" />
             ) : (
-              <Music className="w-6 h-6 text-white" />
+              <Music className="w-5 h-5 md:w-6 md:h-6 text-white" />
             )}
           </div>
           <div>
-            <h2 className="text-3xl font-bold text-white">{channel.name}</h2>
+            <h2 className="text-2xl md:text-3xl font-bold text-white">{channel.name}</h2>
             <div className="flex items-center space-x-3 mt-1">
-              <p className="text-gray-400">{channel.socialAccount.accountName}</p>
+              <p className="text-gray-400 text-sm md:text-base">{channel.socialAccount.accountName}</p>
               <Badge className={getStatusColor(channel.status)}>
                 {channel.status}
               </Badge>
             </div>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-left md:text-right">
           <p className="text-gray-400 text-sm">Total Videos</p>
-          <p className="text-2xl font-bold text-white">{channel.totalVideos}</p>
+          <p className="text-xl md:text-2xl font-bold text-white">{channel.totalVideos}</p>
         </div>
       </div>
 
       {/* Channel Configuration Overview */}
       <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-white">Channel Configuration</CardTitle>
+          <CardTitle className="text-white text-lg md:text-xl">Channel Configuration</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
             <div className="flex items-center space-x-3">
               <Palette className="w-5 h-5 text-purple-400" />
               <div>
                 <p className="text-gray-400 text-sm">Theme</p>
-                <p className="text-white font-medium">{channel.theme.name}</p>
+                <p className="text-white font-medium text-sm md:text-base">{channel.theme.name}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -99,7 +99,7 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
               <div>
                 <p className="text-gray-400 text-sm">Voice</p>
                 <div className="flex items-center space-x-1">
-                  <p className="text-white font-medium">{channel.voice.name}</p>
+                  <p className="text-white font-medium text-sm md:text-base">{channel.voice.name}</p>
                   {channel.voice.type === "premium" && <span className="text-xs">👑</span>}
                 </div>
               </div>
@@ -108,14 +108,14 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
               <Calendar className="w-5 h-5 text-green-400" />
               <div>
                 <p className="text-gray-400 text-sm">Schedule</p>
-                <p className="text-white font-medium">{channel.schedule}</p>
+                <p className="text-white font-medium text-sm md:text-base">{channel.schedule}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <FileText className="w-5 h-5 text-orange-400" />
               <div>
                 <p className="text-gray-400 text-sm">Topic</p>
-                <p className="text-white font-medium">{channel.topic}</p>
+                <p className="text-white font-medium text-sm md:text-base">{channel.topic}</p>
               </div>
             </div>
           </div>
@@ -123,49 +123,53 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
       </Card>
 
       {/* Channel Content Tabs */}
-      <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-6">
-        <TabsList className="bg-black/40 border border-white/10">
-          <TabsTrigger value="overview" className="data-[state=active]:bg-white/10">
-            <Settings className="w-4 h-4 mr-2" />
-            Overview
+      <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4 md:space-y-6">
+        <TabsList className="bg-black/40 border border-white/10 grid w-full grid-cols-2 md:grid-cols-4 h-auto p-1">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
+            <Settings className="w-4 h-4" />
+            <span className="hidden md:inline">Overview</span>
+            <span className="md:hidden">Info</span>
           </TabsTrigger>
-          <TabsTrigger value="calendar" className="data-[state=active]:bg-white/10">
-            <Calendar className="w-4 h-4 mr-2" />
-            Content Calendar
+          <TabsTrigger value="calendar" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
+            <Calendar className="w-4 h-4" />
+            <span className="hidden md:inline">Content Calendar</span>
+            <span className="md:hidden">Calendar</span>
           </TabsTrigger>
-          <TabsTrigger value="scripts" className="data-[state=active]:bg-white/10">
-            <Video className="w-4 h-4 mr-2" />
-            Scripts & Previews
+          <TabsTrigger value="scripts" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
+            <Video className="w-4 h-4" />
+            <span className="hidden md:inline">Scripts & Previews</span>
+            <span className="md:hidden">Scripts</span>
           </TabsTrigger>
-          <TabsTrigger value="settings" className="data-[state=active]:bg-white/10">
-            <Settings className="w-4 h-4 mr-2" />
-            Channel Settings
+          <TabsTrigger value="settings" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
+            <Settings className="w-4 h-4" />
+            <span className="hidden md:inline">Channel Settings</span>
+            <span className="md:hidden">Settings</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="overview" className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-white">Recent Content</CardTitle>
+                <CardTitle className="text-white text-lg md:text-xl">Recent Content</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between p-3 bg-white/5 rounded-lg space-y-2 md:space-y-0">
                     <div>
-                      <p className="text-white font-medium">5 Morning Productivity Tips</p>
-                      <p className="text-gray-400 text-sm">Published 2 hours ago</p>
+                      <p className="text-white font-medium text-sm md:text-base">5 Morning Productivity Tips</p>
+                      <p className="text-gray-400 text-xs md:text-sm">Published 2 hours ago</p>
                     </div>
-                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 self-start md:self-center">
                       Live
                     </Badge>
                   </div>
-                  <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between p-3 bg-white/5 rounded-lg space-y-2 md:space-y-0">
                     <div>
-                      <p className="text-white font-medium">Transform Your Workspace</p>
-                      <p className="text-gray-400 text-sm">Scheduled for tomorrow</p>
+                      <p className="text-white font-medium text-sm md:text-base">Transform Your Workspace</p>
+                      <p className="text-gray-400 text-xs md:text-sm">Scheduled for tomorrow</p>
                     </div>
-                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 self-start md:self-center">
                       Scheduled
                     </Badge>
                   </div>
@@ -175,25 +179,25 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
 
             <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-white">Performance Stats</CardTitle>
+                <CardTitle className="text-white text-lg md:text-xl">Performance Stats</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-gray-400 text-sm">Views This Month</p>
-                    <p className="text-2xl font-bold text-white">12.4K</p>
+                    <p className="text-gray-400 text-xs md:text-sm">Views This Month</p>
+                    <p className="text-xl md:text-2xl font-bold text-white">12.4K</p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">Engagement Rate</p>
-                    <p className="text-2xl font-bold text-white">7.2%</p>
+                    <p className="text-gray-400 text-xs md:text-sm">Engagement Rate</p>
+                    <p className="text-xl md:text-2xl font-bold text-white">7.2%</p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">Avg. Watch Time</p>
-                    <p className="text-2xl font-bold text-white">42s</p>
+                    <p className="text-gray-400 text-xs md:text-sm">Avg. Watch Time</p>
+                    <p className="text-xl md:text-2xl font-bold text-white">42s</p>
                   </div>
                   <div>
-                    <p className="text-gray-400 text-sm">Subscribers</p>
-                    <p className="text-2xl font-bold text-white">+127</p>
+                    <p className="text-gray-400 text-xs md:text-sm">Subscribers</p>
+                    <p className="text-xl md:text-2xl font-bold text-white">+127</p>
                   </div>
                 </div>
               </CardContent>
@@ -209,16 +213,16 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
           <ScriptPreview />
         </TabsContent>
 
-        <TabsContent value="settings" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TabsContent value="settings" className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-white">Theme & Colors</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-white text-lg md:text-xl">Theme & Colors</CardTitle>
+                <CardDescription className="text-gray-400 text-sm md:text-base">
                   Customize the visual appearance of your content
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-4 md:space-y-6">
                 <ThemeSelector />
                 <ColorCustomizer />
               </CardContent>
@@ -226,8 +230,8 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
 
             <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="text-white">Voice Settings</CardTitle>
-                <CardDescription className="text-gray-400">
+                <CardTitle className="text-white text-lg md:text-xl">Voice Settings</CardTitle>
+                <CardDescription className="text-gray-400 text-sm md:text-base">
                   Configure AI voice for narration
                 </CardDescription>
               </CardHeader>
