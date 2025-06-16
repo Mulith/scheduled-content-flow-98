@@ -200,30 +200,7 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
         </TabsContent>
 
         <TabsContent value="content" className="space-y-4 md:space-y-6">
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
-            {/* Content Calendar Section */}
-            <div className="xl:col-span-2">
-              <ContentCalendar />
-            </div>
-            
-            {/* Scripts Preview Section */}
-            <div className="xl:col-span-2">
-              <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="text-white text-lg md:text-xl flex items-center">
-                    <FileText className="w-5 h-5 mr-2" />
-                    Scripts & Previews
-                  </CardTitle>
-                  <CardDescription className="text-gray-400 text-sm md:text-base">
-                    Preview and manage your generated content
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScriptPreview />
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <ContentCalendar />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4 md:space-y-6">
