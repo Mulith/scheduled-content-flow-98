@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar, DollarSign, AlertCircle } from "lucide-react";
+import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar, DollarSign, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface ContentChannel {
@@ -86,6 +86,38 @@ const mockChannels: ContentChannel[] = [
   },
 ];
 
+// Updated video style themes
+const availableVideoStyles = [
+  { id: "story", name: "Story Format", color: "from-blue-500 to-cyan-500", description: "Narrative-driven content with beginning, middle, and end" },
+  { id: "top5", name: "Top 5 Lists", color: "from-purple-500 to-pink-500", description: "Countdown and ranking format" },
+  { id: "bestof", name: "Best of All Time", color: "from-orange-500 to-red-500", description: "Ultimate guides and definitive lists" },
+  { id: "howto", name: "How-To Tutorial", color: "from-green-500 to-emerald-500", description: "Step-by-step instructional content" },
+  { id: "reaction", name: "Reaction & Commentary", color: "from-yellow-500 to-orange-500", description: "Response and opinion-based content" },
+  { id: "quicktips", name: "Quick Tips", color: "from-indigo-500 to-purple-500", description: "Short, actionable advice format" },
+];
+
+// Predefined topic categories
+const topicCategories = [
+  "Productivity & Self-Improvement",
+  "Health & Fitness",
+  "Technology & Gadgets",
+  "Business & Entrepreneurship",
+  "Cooking & Food",
+  "Travel & Adventure",
+  "Fashion & Style",
+  "Gaming & Entertainment",
+  "DIY & Crafts",
+  "Personal Finance",
+  "Relationships & Dating",
+  "Education & Learning",
+];
+
+// Mock connected social accounts
+const mockConnectedAccounts = {
+  youtube: ["ProductivityMaster", "TechReviews2024", "CookingWithSarah"],
+  tiktok: ["@motivationhub", "@techtalks", "@foodiefinds", "@lifehacks101"],
+};
+
 const availableThemes = [
   { id: "productivity", name: "Productivity & Self-Improvement", color: "from-blue-500 to-cyan-500" },
   { id: "motivation", name: "Motivational Content", color: "from-orange-500 to-red-500" },
@@ -118,11 +150,13 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
   const [channels, setChannels] = useState<ContentChannel[]>(mockChannels);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<ContentChannel | null>(null);
+  const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
+  const [generatedTopics, setGeneratedTopics] = useState<string[]>([]);
+  const [customTopic, setCustomTopic] = useState("");
   const [formData, setFormData] = useState({
-    name: "",
     platform: "",
     accountName: "",
-    theme: "",
+    videoStyle: "",
     voice: "",
     topic: "",
     schedule: "",
@@ -130,18 +164,41 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
   const resetForm = () => {
     setFormData({
-      name: "",
       platform: "",
       accountName: "",
-      theme: "",
+      videoStyle: "",
       voice: "",
       topic: "",
       schedule: "",
     });
+    setGeneratedTopics([]);
+    setCustomTopic("");
+  };
+
+  const generateAITopics = async () => {
+    setIsGeneratingTopics(true);
+    // Simulate AI generation
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const aiTopics = [
+      "Morning routines that actually work",
+      "5-minute productivity hacks for busy professionals",
+      "Why most people fail at building habits",
+      "The secret to staying motivated every day",
+      "Simple tricks to boost your energy instantly",
+    ];
+    
+    setGeneratedTopics(aiTopics);
+    setIsGeneratingTopics(false);
+    
+    toast({
+      title: "Topics Generated",
+      description: "AI has suggested topics based on your video style selection!",
+    });
   };
 
   const handleCreateChannel = () => {
-    if (!formData.name || !formData.platform || !formData.theme || !formData.voice || !formData.topic || !formData.schedule) {
+    if (!formData.platform || !formData.accountName || !formData.videoStyle || !formData.voice || !formData.topic || !formData.schedule) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
@@ -150,18 +207,18 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
       return;
     }
 
-    const selectedTheme = availableThemes.find(t => t.id === formData.theme);
+    const selectedStyle = availableVideoStyles.find(s => s.id === formData.videoStyle);
     const selectedVoice = availableVoices.find(v => v.id === formData.voice);
 
     const newChannel: ContentChannel = {
       id: Date.now().toString(),
-      name: formData.name,
+      name: formData.accountName,
       socialAccount: {
         platform: formData.platform as "youtube" | "tiktok",
-        accountName: formData.accountName || "Not connected",
-        connected: !!formData.accountName,
+        accountName: formData.accountName,
+        connected: true,
       },
-      theme: selectedTheme!,
+      theme: selectedStyle!,
       voice: selectedVoice!,
       topic: formData.topic,
       schedule: formData.schedule,
@@ -177,7 +234,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     
     toast({
       title: "Channel Created",
-      description: `${formData.name} has been created successfully!`,
+      description: `${formData.accountName} channel has been created successfully!`,
     });
   };
 
@@ -226,6 +283,11 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     return selectedSchedule ? selectedSchedule.price : "$0/month";
   };
 
+  const getAvailableAccounts = () => {
+    if (!formData.platform) return [];
+    return mockConnectedAccounts[formData.platform as keyof typeof mockConnectedAccounts] || [];
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -239,11 +301,11 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
               Create Channel
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-gray-900 border-white/10 text-white max-w-2xl">
+          <DialogContent className="bg-gray-900 border-white/10 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Content Channel</DialogTitle>
               <DialogDescription className="text-gray-400">
-                Set up a new channel with its own theme, voice, and topic configuration
+                Set up a new channel with its own video style, voice, and topic configuration
               </DialogDescription>
             </DialogHeader>
             
@@ -265,40 +327,97 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Channel Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="e.g., Productivity Tips"
-                  className="bg-white/10 border-white/20"
-                />
+            <div className="space-y-6">
+              {/* Platform and Account Selection */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="platform">Social Platform</Label>
+                  <Select value={formData.platform} onValueChange={(value) => setFormData({...formData, platform: value, accountName: ""})}>
+                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      <SelectItem value="youtube" className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                        <div className="flex items-center space-x-2">
+                          <Youtube className="w-4 h-4 text-red-500" />
+                          <span>YouTube</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="tiktok" className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                        <div className="flex items-center space-x-2">
+                          <Music className="w-4 h-4 text-pink-500" />
+                          <span>TikTok</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="account">Connected Account</Label>
+                  <Select 
+                    value={formData.accountName} 
+                    onValueChange={(value) => setFormData({...formData, accountName: value})}
+                    disabled={!formData.platform}
+                  >
+                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                      <SelectValue placeholder={formData.platform ? "Select account" : "Choose platform first"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      {getAvailableAccounts().map((account) => (
+                        <SelectItem key={account} value={account} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                          {account}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {formData.platform && getAvailableAccounts().length === 0 && (
+                    <p className="text-xs text-yellow-400">No connected accounts found. Connect your {formData.platform} account first.</p>
+                  )}
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="platform">Social Platform</Label>
-                <Select value={formData.platform} onValueChange={(value) => setFormData({...formData, platform: value})}>
-                  <SelectTrigger className="bg-white/10 border-white/20">
-                    <SelectValue placeholder="Select platform" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-white/10">
-                    <SelectItem value="youtube">YouTube</SelectItem>
-                    <SelectItem value="tiktok">TikTok</SelectItem>
-                  </SelectContent>
-                </Select>
+
+              {/* Video Style and Voice */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="videoStyle">Video Style</Label>
+                  <Select value={formData.videoStyle} onValueChange={(value) => setFormData({...formData, videoStyle: value})}>
+                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                      <SelectValue placeholder="Select video style" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      {availableVideoStyles.map((style) => (
+                        <SelectItem key={style.id} value={style.id} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                          <div>
+                            <div className="font-medium">{style.name}</div>
+                            <div className="text-xs text-gray-400">{style.description}</div>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="voice">AI Voice</Label>
+                  <Select value={formData.voice} onValueChange={(value) => setFormData({...formData, voice: value})}>
+                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                      <SelectValue placeholder="Select voice" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      {availableVoices.map((voice) => (
+                        <SelectItem key={voice.id} value={voice.id} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                          <div className="flex items-center justify-between w-full">
+                            <span>{voice.name}</span>
+                            {voice.type === "premium" && <span className="text-yellow-400">👑</span>}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="account">Account Name (Optional)</Label>
-                <Input
-                  id="account"
-                  value={formData.accountName}
-                  onChange={(e) => setFormData({...formData, accountName: e.target.value})}
-                  placeholder="@youraccount"
-                  className="bg-white/10 border-white/20"
-                />
-              </div>
-              
+
               {/* Enhanced Schedule Selection with Pricing */}
               <div className="space-y-2">
                 <Label htmlFor="schedule" className="flex items-center space-x-2">
@@ -306,12 +425,12 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                   <DollarSign className="w-4 h-4 text-green-400" />
                 </Label>
                 <Select value={formData.schedule} onValueChange={(value) => setFormData({...formData, schedule: value})}>
-                  <SelectTrigger className="bg-white/10 border-white/20">
+                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
                     <SelectValue placeholder="Select schedule & pricing" />
                   </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-white/10">
+                  <SelectContent className="bg-gray-800 border-gray-600">
                     {scheduleOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
+                      <SelectItem key={option.value} value={option.value} className="text-white hover:bg-gray-700 focus:bg-gray-700">
                         <div className="flex items-center justify-between w-full">
                           <div>
                             <span className="font-medium">{option.label}</span>
@@ -330,45 +449,80 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="theme">Content Theme</Label>
-                <Select value={formData.theme} onValueChange={(value) => setFormData({...formData, theme: value})}>
-                  <SelectTrigger className="bg-white/10 border-white/20">
-                    <SelectValue placeholder="Select theme" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-white/10">
-                    {availableThemes.map((theme) => (
-                      <SelectItem key={theme.id} value={theme.id}>
-                        {theme.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="voice">AI Voice</Label>
-                <Select value={formData.voice} onValueChange={(value) => setFormData({...formData, voice: value})}>
-                  <SelectTrigger className="bg-white/10 border-white/20">
-                    <SelectValue placeholder="Select voice" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-white/10">
-                    {availableVoices.map((voice) => (
-                      <SelectItem key={voice.id} value={voice.id}>
-                        {voice.name} {voice.type === "premium" && "👑"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="topic">Specific Topic/Niche</Label>
-                <Input
-                  id="topic"
-                  value={formData.topic}
-                  onChange={(e) => setFormData({...formData, topic: e.target.value})}
-                  placeholder="e.g., Morning routines for entrepreneurs"
-                  className="bg-white/10 border-white/20"
-                />
+              {/* Topic Selection */}
+              <div className="space-y-3">
+                <Label>Topic Selection</Label>
+                
+                {/* Topic Categories */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-300">Choose from popular topics:</Label>
+                  <Select value={formData.topic} onValueChange={(value) => setFormData({...formData, topic: value})}>
+                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                      <SelectValue placeholder="Select a topic category" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-gray-800 border-gray-600">
+                      {topicCategories.map((topic) => (
+                        <SelectItem key={topic} value={topic} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                          {topic}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* AI Topic Generation */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm text-gray-300">Or get AI-generated topic suggestions:</Label>
+                    <Button 
+                      type="button"
+                      onClick={generateAITopics}
+                      disabled={!formData.videoStyle || isGeneratingTopics}
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {isGeneratingTopics ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-4 h-4 mr-2" />
+                      )}
+                      Generate Topics
+                    </Button>
+                  </div>
+                  
+                  {generatedTopics.length > 0 && (
+                    <div className="space-y-2">
+                      {generatedTopics.map((topic, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setFormData({...formData, topic})}
+                          className={`w-full p-3 text-left rounded-lg border transition-colors ${
+                            formData.topic === topic 
+                              ? "bg-purple-500/20 border-purple-500/50 text-white" 
+                              : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
+                          }`}
+                        >
+                          {topic}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Custom Topic Input */}
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-300">Or enter a custom topic:</Label>
+                  <Input
+                    value={customTopic}
+                    onChange={(e) => {
+                      setCustomTopic(e.target.value);
+                      setFormData({...formData, topic: e.target.value});
+                    }}
+                    placeholder="e.g., Morning routines for entrepreneurs"
+                    className="bg-gray-800 border-gray-600 text-white"
+                  />
+                </div>
               </div>
             </div>
 
@@ -426,7 +580,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                         <ExternalLink className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                       <CardDescription className="text-gray-400">
-                        {channel.socialAccount.accountName}
+                        {channel.socialAccount.platform === "youtube" ? "YouTube" : "TikTok"} • {channel.socialAccount.accountName}
                       </CardDescription>
                     </div>
                   </div>
@@ -440,12 +594,12 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent className="bg-gray-800 border-white/10">
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleStatus(channel.id); }} className="text-white hover:bg-white/10">
+                      <DropdownMenuContent className="bg-gray-800 border-gray-600">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleStatus(channel.id); }} className="text-white hover:bg-gray-700 focus:bg-gray-700">
                           <Edit className="w-4 h-4 mr-2" />
                           {channel.status === "active" ? "Pause" : "Activate"}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteChannel(channel.id); }} className="text-red-400 hover:bg-red-500/10">
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteChannel(channel.id); }} className="text-red-400 hover:bg-red-500/10 focus:bg-red-500/10">
                           <Trash2 className="w-4 h-4 mr-2" />
                           Delete
                         </DropdownMenuItem>
@@ -474,7 +628,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                   <div className="flex items-center space-x-2">
                     <Palette className="w-4 h-4 text-purple-400" />
                     <div>
-                      <p className="text-xs text-gray-400">Theme</p>
+                      <p className="text-xs text-gray-400">Style</p>
                       <p className="text-sm text-white">{channel.theme.name}</p>
                     </div>
                   </div>
@@ -522,6 +676,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
         })}
       </div>
 
+      {/* Empty State */}
       {channels.length === 0 && (
         <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
           <CardContent className="p-8 text-center">
