@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar, DollarSign, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
 
 interface ContentChannel {
   id: string;
@@ -153,6 +154,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
   const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
   const [generatedTopics, setGeneratedTopics] = useState<string[]>([]);
   const [customTopic, setCustomTopic] = useState("");
+  const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     platform: "",
     accountName: "",
@@ -161,6 +163,17 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     topic: "",
     schedule: "",
   });
+
+  const { fetchConnectedChannels } = useYouTubeAuth();
+
+  useEffect(() => {
+    loadConnectedChannels();
+  }, []);
+
+  const loadConnectedChannels = async () => {
+    const youtubeChannels = await fetchConnectedChannels();
+    setConnectedYouTubeChannels(youtubeChannels);
+  };
 
   const resetForm = () => {
     setFormData({
@@ -285,6 +298,16 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
   const getAvailableAccounts = () => {
     if (!formData.platform) return [];
+    
+    if (formData.platform === 'youtube') {
+      return connectedYouTubeChannels.map(channel => ({
+        id: channel.channel_id,
+        name: channel.channel_name,
+        handle: channel.channel_handle,
+      }));
+    }
+    
+    // TikTok mock data for now
     return mockConnectedAccounts[formData.platform as keyof typeof mockConnectedAccounts] || [];
   };
 
@@ -364,15 +387,42 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                       <SelectValue placeholder={formData.platform ? "Select account" : "Choose platform first"} />
                     </SelectTrigger>
                     <SelectContent className="bg-gray-800 border-gray-600">
-                      {getAvailableAccounts().map((account) => (
-                        <SelectItem key={account} value={account} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                          {account}
-                        </SelectItem>
-                      ))}
+                      {formData.platform === 'youtube' ? (
+                        connectedYouTubeChannels.length > 0 ? (
+                          connectedYouTubeChannels.map((channel) => (
+                            <SelectItem key={channel.channel_id} value={channel.channel_name} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                              <div className="flex items-center space-x-2">
+                                {channel.thumbnail_url && (
+                                  <img src={channel.thumbnail_url} alt="" className="w-4 h-4 rounded-full" />
+                                )}
+                                <span>{channel.channel_name}</span>
+                                <span className="text-xs text-gray-400">({channel.channel_handle})</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="no-accounts" disabled className="text-gray-400">
+                            No YouTube channels connected
+                          </SelectItem>
+                        )
+                      ) : (
+                        getAvailableAccounts().map((account) => (
+                          <SelectItem key={account} value={account} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                            {account}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
-                  {formData.platform && getAvailableAccounts().length === 0 && (
-                    <p className="text-xs text-yellow-400">No connected accounts found. Connect your {formData.platform} account first.</p>
+                  {formData.platform === 'youtube' && connectedYouTubeChannels.length === 0 && (
+                    <p className="text-xs text-yellow-400">
+                      No YouTube channels connected. Go to Social Accounts to connect your YouTube channel first.
+                    </p>
+                  )}
+                  {formData.platform === 'tiktok' && (
+                    <p className="text-xs text-yellow-400">
+                      TikTok integration coming soon. Connect your TikTok account in Social Accounts.
+                    </p>
                   )}
                 </div>
               </div>

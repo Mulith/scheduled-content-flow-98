@@ -1,19 +1,63 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Youtube, Music } from "lucide-react";
+import { Youtube, Music, ExternalLink, Users, Video, CheckCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
 
 export const SocialConnections = () => {
   const [connections, setConnections] = useState({
     youtube: { connected: false, enabled: false },
     tiktok: { connected: false, enabled: false },
   });
+  
+  const [youtubeChannels, setYoutubeChannels] = useState<any[]>([]);
+  const { isConnecting, connectYouTube, handleOAuthCallback, fetchConnectedChannels } = useYouTubeAuth();
+
+  // Check for OAuth callback
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    const state = urlParams.get('state');
+    
+    if (code && state) {
+      handleOAuthCallback(code, state).then((channel) => {
+        if (channel) {
+          loadYouTubeChannels();
+          // Clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      });
+    } else {
+      loadYouTubeChannels();
+    }
+  }, []);
+
+  const loadYouTubeChannels = async () => {
+    const channels = await fetchConnectedChannels();
+    setYoutubeChannels(channels);
+    setConnections(prev => ({
+      ...prev,
+      youtube: { 
+        connected: channels.length > 0, 
+        enabled: channels.some(c => c.enabled) || false 
+      }
+    }));
+  };
+
+  const handleConnectYouTube = async () => {
+    await connectYouTube();
+  };
 
   const handleConnect = (platform: string) => {
+    if (platform === 'youtube') {
+      handleConnectYouTube();
+      return;
+    }
+    
     setConnections(prev => ({
       ...prev,
       [platform]: { ...prev[platform], connected: true }
@@ -29,6 +73,16 @@ export const SocialConnections = () => {
       ...prev,
       [platform]: { ...prev[platform], enabled: !prev[platform].enabled }
     }));
+  };
+
+  const formatNumber = (num: number | string) => {
+    const number = typeof num === 'string' ? parseInt(num) : num;
+    if (number >= 1000000) {
+      return `${(number / 1000000).toFixed(1)}M`;
+    } else if (number >= 1000) {
+      return `${(number / 1000).toFixed(1)}K`;
+    }
+    return number.toString();
   };
 
   return (
@@ -64,8 +118,39 @@ export const SocialConnections = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {connections.youtube.connected ? (
+            {connections.youtube.connected && youtubeChannels.length > 0 ? (
               <div className="space-y-4">
+                {youtubeChannels.map((channel) => (
+                  <div key={channel.id} className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="flex items-start space-x-3">
+                      {channel.thumbnail_url && (
+                        <img 
+                          src={channel.thumbnail_url} 
+                          alt={channel.channel_name}
+                          className="w-12 h-12 rounded-full"
+                        />
+                      )}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <h4 className="text-green-400 font-medium">{channel.channel_name}</h4>
+                          <CheckCircle className="w-4 h-4 text-green-400" />
+                        </div>
+                        <p className="text-green-400 text-sm">{channel.channel_handle}</p>
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-green-300">
+                          <div className="flex items-center space-x-1">
+                            <Users className="w-3 h-3" />
+                            <span>{formatNumber(channel.subscriber_count)} subscribers</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Video className="w-3 h-3" />
+                            <span>{formatNumber(channel.video_count)} videos</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
                 <div className="flex items-center justify-between">
                   <span className="text-white">Enable auto-posting</span>
                   <Switch 
@@ -73,21 +158,14 @@ export const SocialConnections = () => {
                     onCheckedChange={() => handleToggle('youtube')}
                   />
                 </div>
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <p className="text-green-400 text-sm">
-                    ✓ Connected to: YourChannel (@yourchannel)
-                  </p>
-                  <p className="text-green-400 text-sm">
-                    ✓ Permissions: Upload videos, manage channel
-                  </p>
-                </div>
               </div>
             ) : (
               <Button 
                 onClick={() => handleConnect('youtube')}
+                disabled={isConnecting}
                 className="w-full bg-red-600 hover:bg-red-700"
               >
-                Connect YouTube Account
+                {isConnecting ? "Connecting..." : "Connect YouTube Account"}
               </Button>
             )}
           </CardContent>
