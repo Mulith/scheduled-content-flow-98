@@ -31,7 +31,12 @@ serve(async (req) => {
 
     if (action === 'getAuthUrl') {
       const clientId = Deno.env.get('YOUTUBE_CLIENT_ID')
-      const redirectUri = `${req.headers.get('origin')}/app`
+      const origin = req.headers.get('origin')
+      
+      // Use the actual origin from the request as the redirect URI
+      const redirectUri = `${origin}/app`
+      
+      console.log('Redirect URI:', redirectUri)
       
       const authUrl = new URL('https://accounts.google.com/o/oauth2/auth')
       authUrl.searchParams.set('client_id', clientId!)
@@ -50,7 +55,10 @@ serve(async (req) => {
     if (action === 'exchangeCode') {
       const clientId = Deno.env.get('YOUTUBE_CLIENT_ID')
       const clientSecret = Deno.env.get('YOUTUBE_CLIENT_SECRET')
-      const redirectUri = `${req.headers.get('origin')}/app`
+      const origin = req.headers.get('origin')
+      const redirectUri = `${origin}/app`
+
+      console.log('Exchange code redirect URI:', redirectUri)
 
       // Exchange code for tokens
       const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
@@ -68,6 +76,7 @@ serve(async (req) => {
       const tokenData = await tokenResponse.json()
 
       if (!tokenData.access_token) {
+        console.error('Token exchange failed:', tokenData)
         throw new Error('Failed to get access token')
       }
 
