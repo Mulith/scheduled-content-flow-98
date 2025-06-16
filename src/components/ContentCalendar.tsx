@@ -1,11 +1,11 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Clock, PlayCircle, Edit } from "lucide-react";
+import { Calendar, Clock, PlayCircle, Edit, ChevronLeft, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { ScriptPreview } from "@/components/ScriptPreview";
 
 const scheduleOptions = [
   { value: "twice-daily", label: "2x Daily", description: "Morning and evening posts", frequency: "14 posts/week" },
@@ -60,6 +60,9 @@ const mockContentIdeas = [
 export const ContentCalendar = () => {
   const [selectedSchedule, setSelectedSchedule] = useState("");
   const [generatedIdeas, setGeneratedIdeas] = useState(mockContentIdeas);
+  const [selectedIdeaId, setSelectedIdeaId] = useState<number | null>(null);
+
+  const selectedIdea = selectedIdeaId ? generatedIdeas.find(idea => idea.id === selectedIdeaId) : null;
 
   const handleScheduleSelect = (value: string) => {
     setSelectedSchedule(value);
@@ -95,6 +98,14 @@ export const ContentCalendar = () => {
     });
   };
 
+  const handleIdeaClick = (ideaId: number) => {
+    setSelectedIdeaId(ideaId);
+  };
+
+  const handleBackToIdeas = () => {
+    setSelectedIdeaId(null);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "script-ready": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
@@ -112,6 +123,34 @@ export const ContentCalendar = () => {
       default: return "text-gray-400";
     }
   };
+
+  // If an idea is selected, show the script preview
+  if (selectedIdea) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button 
+            onClick={handleBackToIdeas}
+            variant="outline" 
+            className="border-white/20 text-white hover:bg-white/10"
+          >
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Back to Content Ideas
+          </Button>
+          <div>
+            <h2 className="text-3xl font-bold text-white">{selectedIdea.title}</h2>
+            <div className="flex items-center space-x-3 mt-1">
+              <Badge variant="outline" className="border-purple-500/30 text-purple-400">
+                {selectedIdea.theme}
+              </Badge>
+              <span className="text-gray-400 text-sm">{selectedIdea.scheduledFor}</span>
+            </div>
+          </div>
+        </div>
+        <ScriptPreview />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -168,7 +207,7 @@ export const ContentCalendar = () => {
                 AI-Generated Content Ideas
               </CardTitle>
               <CardDescription className="text-gray-400">
-                Based on your selected themes and trending topics
+                Based on your selected themes and trending topics. Click on any idea to view its script.
               </CardDescription>
             </div>
             <Button 
@@ -183,10 +222,14 @@ export const ContentCalendar = () => {
         <CardContent>
           <div className="space-y-4">
             {generatedIdeas.map((idea) => (
-              <div key={idea.id} className="p-4 bg-white/5 border border-white/10 rounded-lg">
+              <div 
+                key={idea.id} 
+                className="p-4 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors"
+                onClick={() => handleIdeaClick(idea.id)}
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h4 className="text-white font-medium mb-2">{idea.title}</h4>
+                    <h4 className="text-white font-medium mb-2 hover:text-blue-400 transition-colors">{idea.title}</h4>
                     <div className="flex items-center space-x-4 text-sm">
                       <div className="flex items-center">
                         <Badge variant="outline" className="border-purple-500/30 text-purple-400">
@@ -209,9 +252,20 @@ export const ContentCalendar = () => {
                       {idea.status === "script-ready" ? "Script Ready" : 
                        idea.status === "generating" ? "Generating..." : "Scheduled"}
                     </Badge>
-                    <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white">
-                      <Edit className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        className="text-gray-400 hover:text-white"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Edit functionality here
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Eye className="w-4 h-4 text-blue-400" />
+                    </div>
                   </div>
                 </div>
                 
