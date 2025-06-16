@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlayCircle, Calendar, Palette, Mic, Video, Upload, Settings, Plus, X, Menu, ChevronLeft, ChevronRight } from "lucide-react";
+import { PlayCircle, Calendar, Palette, Mic, Video, Upload, Settings, Plus, X, Menu, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
 import { SocialConnections } from "@/components/SocialConnections";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { ContentCalendar } from "@/components/ContentCalendar";
@@ -14,6 +14,9 @@ import { ChannelContentTabs } from "@/components/ChannelContentTabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { BillingManagement } from "@/components/BillingManagement";
 import { AccountManagement } from "@/components/AccountManagement";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+
 interface ContentChannel {
   id: string;
   name: string;
@@ -38,6 +41,7 @@ interface ContentChannel {
   lastGenerated?: string;
   totalVideos: number;
 }
+
 const mockChannels: ContentChannel[] = [{
   id: "1",
   name: "Productivity Tips",
@@ -85,11 +89,20 @@ const mockChannels: ContentChannel[] = [{
   lastGenerated: "4 hours ago",
   totalVideos: 23
 }];
+
 const Index = () => {
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
   const [channels, setChannels] = useState<ContentChannel[]>(mockChannels);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
   const stats = [{
     label: "Videos Created",
     value: "127",
@@ -107,13 +120,17 @@ const Index = () => {
     value: channels.filter(c => c.status === "active").length.toString(),
     icon: Settings
   }];
+
   const handleChannelUpdate = (updatedChannels: ContentChannel[]) => {
     setChannels(updatedChannels);
   };
+
   const handleChannelSelect = (channelId: string | null) => {
     setSelectedChannelId(channelId);
   };
+
   const selectedChannel = selectedChannelId ? channels.find(c => c.id === selectedChannelId) : null;
+
   const NavigationContent = () => <div className="flex flex-col md:flex-row md:items-center space-y-1 md:space-y-0 md:space-x-1 overflow-x-auto">
       {/* Global Tabs */}
       <button onClick={() => {
@@ -161,6 +178,7 @@ const Index = () => {
         <span className="font-medium">Account</span>
       </button>
     </div>;
+
   return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur-sm">
@@ -178,8 +196,9 @@ const Index = () => {
               <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30 hidden sm:block">
                 Pro Plan
               </Badge>
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 hidden sm:flex">
-                Settings
+              <Button onClick={handleSignOut} variant="outline" className="border-white/20 text-white hover:bg-white/10 hidden sm:flex">
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
               </Button>
               {/* Mobile menu trigger */}
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -191,6 +210,12 @@ const Index = () => {
                 <SheetContent side="left" className="bg-slate-900/95 border-white/10 backdrop-blur-sm w-80">
                   <div className="py-4">
                     <NavigationContent />
+                    <div className="mt-6 pt-6 border-t border-white/10">
+                      <Button onClick={handleSignOut} variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Sign Out
+                      </Button>
+                    </div>
                   </div>
                 </SheetContent>
               </Sheet>
