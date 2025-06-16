@@ -1,8 +1,9 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlayCircle, Calendar, Palette, Mic, Video, Upload, Settings, Plus, X, Menu } from "lucide-react";
+import { PlayCircle, Calendar, Palette, Mic, Video, Upload, Settings, Plus, X, Menu, ChevronLeft, ChevronRight } from "lucide-react";
 import { SocialConnections } from "@/components/SocialConnections";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { ContentCalendar } from "@/components/ContentCalendar";
@@ -314,39 +315,51 @@ const Index = () => {
 
         {activeTab === "channels" && (
           <div className="space-y-4">
-            {/* Compact Channel Header with Inline Selector */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-white">Content Channels</h2>
-                <p className="text-gray-400 text-sm md:text-base">Create and manage your content channels</p>
+            {/* Compact Header with Channel Selector */}
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0">
+                <div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">Content Channels</h2>
+                  <p className="text-gray-400 text-sm md:text-base">Create and manage your content channels</p>
+                </div>
+                {selectedChannelId && (
+                  <Button
+                    onClick={() => setSelectedChannelId(null)}
+                    variant="outline"
+                    size="sm"
+                    className="border-white/20 text-white hover:bg-white/10 self-start sm:self-center"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                    Back to All Channels
+                  </Button>
+                )}
               </div>
               
-              {/* Compact Channel Selector */}
-              {channels.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {channels.map((channel) => (
-                    <button
-                      key={channel.id}
-                      onClick={() => handleChannelSelect(channel.id)}
-                      className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-all text-sm hover:scale-105 ${
-                        selectedChannelId === channel.id
-                          ? "border-purple-500 bg-purple-500/20 text-purple-300"
-                          : "border-white/10 bg-white/5 text-gray-300 hover:border-white/20"
-                      }`}
-                    >
-                      <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${channel.theme.color}`} />
-                      <span className="font-medium">{channel.name}</span>
-                      <Badge className={`text-xs px-1.5 py-0.5 ${
-                        channel.status === "active" 
-                          ? "bg-green-500/20 text-green-400 border-green-500/30" 
-                          : channel.status === "paused"
-                          ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                          : "bg-blue-500/20 text-blue-400 border-blue-500/30"
-                      }`}>
-                        {channel.status}
-                      </Badge>
-                    </button>
-                  ))}
+              {/* Horizontal Scrollable Channel Selector */}
+              {channels.length > 0 && !selectedChannelId && (
+                <div className="relative">
+                  <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+                    {channels.map((channel) => (
+                      <button
+                        key={channel.id}
+                        onClick={() => handleChannelSelect(channel.id)}
+                        className="flex items-center space-x-2 px-3 py-2 rounded-lg border transition-all text-sm hover:scale-105 whitespace-nowrap flex-shrink-0 border-white/10 bg-white/5 text-gray-300 hover:border-white/20"
+                      >
+                        <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${channel.theme.color}`} />
+                        <span className="font-medium">{channel.name}</span>
+                        <Badge className={`text-xs px-1.5 py-0.5 ${
+                          channel.status === "active" 
+                            ? "bg-green-500/20 text-green-400 border-green-500/30" 
+                            : channel.status === "paused"
+                            ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                            : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                        }`}>
+                          {channel.status}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-slate-900 to-transparent pointer-events-none" />
                 </div>
               )}
             </div>
