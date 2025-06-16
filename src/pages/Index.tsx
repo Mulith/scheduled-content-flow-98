@@ -12,6 +12,8 @@ import { ScriptPreview } from "@/components/ScriptPreview";
 import { ContentChannels } from "@/components/ContentChannels";
 import { ChannelContentTabs } from "@/components/ChannelContentTabs";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { BillingManagement } from "@/components/BillingManagement";
+import { AccountManagement } from "@/components/AccountManagement";
 interface ContentChannel {
   id: string;
   name: string;
@@ -139,6 +141,24 @@ const Index = () => {
     }} className={`flex items-center justify-start md:justify-center space-x-2 py-3 md:py-4 px-4 border-b-2 md:border-b-2 border-r-0 md:border-r-0 transition-colors whitespace-nowrap text-left md:text-center ${activeTab === "connections" ? "border-blue-500 text-blue-400 bg-blue-500/10 md:bg-transparent" : "border-transparent text-gray-400 hover:text-white hover:bg-white/5 md:hover:bg-transparent"}`}>
         <Upload className="w-4 h-4" />
         <span className="font-medium">Social Accounts</span>
+      </button>
+
+      <button onClick={() => {
+      setActiveTab("billing");
+      setSelectedChannelId(null);
+      setIsMobileMenuOpen(false);
+    }} className={`flex items-center justify-start md:justify-center space-x-2 py-3 md:py-4 px-4 border-b-2 md:border-b-2 border-r-0 md:border-r-0 transition-colors whitespace-nowrap text-left md:text-center ${activeTab === "billing" ? "border-blue-500 text-blue-400 bg-blue-500/10 md:bg-transparent" : "border-transparent text-gray-400 hover:text-white hover:bg-white/5 md:hover:bg-transparent"}`}>
+        <Calendar className="w-4 h-4" />
+        <span className="font-medium">Billing</span>
+      </button>
+
+      <button onClick={() => {
+      setActiveTab("account");
+      setSelectedChannelId(null);
+      setIsMobileMenuOpen(false);
+    }} className={`flex items-center justify-start md:justify-center space-x-2 py-3 md:py-4 px-4 border-b-2 md:border-b-2 border-r-0 md:border-r-0 transition-colors whitespace-nowrap text-left md:text-center ${activeTab === "account" ? "border-blue-500 text-blue-400 bg-blue-500/10 md:bg-transparent" : "border-transparent text-gray-400 hover:text-white hover:bg-white/5 md:hover:bg-transparent"}`}>
+        <Settings className="w-4 h-4" />
+        <span className="font-medium">Account</span>
       </button>
     </div>;
   return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -288,6 +308,10 @@ const Index = () => {
           </div>}
 
         {activeTab === "connections" && <SocialConnections />}
+
+        {activeTab === "billing" && <BillingManagement />}
+
+        {activeTab === "account" && <AccountManagement />}
       </main>
     </div>;
 };
