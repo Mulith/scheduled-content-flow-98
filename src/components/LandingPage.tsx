@@ -2,15 +2,42 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Zap, Clock, CheckCircle, Star } from "lucide-react";
+import { Calendar, Users, Zap, Clock, CheckCircle, Star, LogIn, User } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface LandingPageProps {
   onGetStarted: () => void;
 }
 
 export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header with Login Button */}
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex justify-between items-center">
+          <div className="text-white font-bold text-xl">AutoContent Pro</div>
+          <Button
+            onClick={onGetStarted}
+            variant="outline"
+            className="border-white/20 text-white hover:bg-white/10"
+          >
+            {user ? (
+              <>
+                <User className="w-4 h-4 mr-2" />
+                Go to Dashboard
+              </>
+            ) : (
+              <>
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-16">
         <div className="text-center space-y-8">
