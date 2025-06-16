@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -124,21 +123,16 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
 
       {/* Channel Content Tabs */}
       <Tabs value={activeSubTab} onValueChange={setActiveSubTab} className="space-y-4 md:space-y-6">
-        <TabsList className="bg-black/40 border border-white/10 grid w-full grid-cols-2 md:grid-cols-4 h-auto p-1">
+        <TabsList className="bg-black/40 border border-white/10 grid w-full grid-cols-3 h-auto p-1">
           <TabsTrigger value="overview" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
             <Settings className="w-4 h-4" />
             <span className="hidden md:inline">Overview</span>
             <span className="md:hidden">Info</span>
           </TabsTrigger>
-          <TabsTrigger value="calendar" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
-            <Calendar className="w-4 h-4" />
-            <span className="hidden md:inline">Content Calendar</span>
-            <span className="md:hidden">Calendar</span>
-          </TabsTrigger>
-          <TabsTrigger value="scripts" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
+          <TabsTrigger value="content" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
             <Video className="w-4 h-4" />
-            <span className="hidden md:inline">Scripts & Previews</span>
-            <span className="md:hidden">Scripts</span>
+            <span className="hidden md:inline">Content</span>
+            <span className="md:hidden">Content</span>
           </TabsTrigger>
           <TabsTrigger value="settings" className="data-[state=active]:bg-white/10 flex-col md:flex-row space-y-1 md:space-y-0 md:space-x-2 py-2 md:py-3 text-xs md:text-sm">
             <Settings className="w-4 h-4" />
@@ -205,12 +199,31 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
           </div>
         </TabsContent>
 
-        <TabsContent value="calendar">
-          <ContentCalendar />
-        </TabsContent>
-
-        <TabsContent value="scripts">
-          <ScriptPreview />
+        <TabsContent value="content" className="space-y-4 md:space-y-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+            {/* Content Calendar Section */}
+            <div className="xl:col-span-2">
+              <ContentCalendar />
+            </div>
+            
+            {/* Scripts Preview Section */}
+            <div className="xl:col-span-2">
+              <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-white text-lg md:text-xl flex items-center">
+                    <FileText className="w-5 h-5 mr-2" />
+                    Scripts & Previews
+                  </CardTitle>
+                  <CardDescription className="text-gray-400 text-sm md:text-base">
+                    Preview and manage your generated content
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScriptPreview />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4 md:space-y-6">
