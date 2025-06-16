@@ -3,11 +3,10 @@ import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { LandingPage } from "@/components/LandingPage";
 import { AuthPage } from "@/components/AuthPage";
-import { Dashboard } from "@/components/Dashboard";
 
 const Index = () => {
   const [showAuth, setShowAuth] = useState(false);
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
 
   if (loading) {
     return (
@@ -15,10 +14,6 @@ const Index = () => {
         <div className="text-white text-xl">Loading...</div>
       </div>
     );
-  }
-
-  if (user) {
-    return <Dashboard />;
   }
 
   if (showAuth) {
