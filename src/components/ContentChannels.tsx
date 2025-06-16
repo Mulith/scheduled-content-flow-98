@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar } from "lucide-react";
+import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar, DollarSign, AlertCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface ContentChannel {
@@ -103,10 +103,10 @@ const availableVoices = [
 ];
 
 const scheduleOptions = [
-  { value: "twice-daily", label: "2x Daily", price: "$45/month" },
-  { value: "daily", label: "Daily", price: "$30/month" },
-  { value: "weekly", label: "Weekly", price: "$20/month" },
-  { value: "monthly", label: "Monthly", price: "$15/month" },
+  { value: "twice-daily", label: "2x Daily", price: "$45/month", description: "Two posts per day" },
+  { value: "daily", label: "Daily", price: "$30/month", description: "One post per day" },
+  { value: "weekly", label: "Weekly", price: "$20/month", description: "One post per week" },
+  { value: "monthly", label: "Monthly", price: "$15/month", description: "One post per month" },
 ];
 
 interface ContentChannelsProps {
@@ -221,6 +221,11 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     return schedule ? { label: schedule.label, price: schedule.price } : { label: "Unknown", price: "N/A" };
   };
 
+  const getSelectedSchedulePrice = () => {
+    const selectedSchedule = scheduleOptions.find(s => s.value === formData.schedule);
+    return selectedSchedule ? selectedSchedule.price : "$0/month";
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -241,6 +246,25 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                 Set up a new channel with its own theme, voice, and topic configuration
               </DialogDescription>
             </DialogHeader>
+            
+            {/* Subscription Impact Notice */}
+            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
+              <div className="flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5" />
+                <div>
+                  <h4 className="text-blue-400 font-medium">Subscription Impact</h4>
+                  <p className="text-gray-300 text-sm">
+                    Creating a new channel will add to your monthly subscription. Each channel is billed separately based on its posting frequency.
+                  </p>
+                  {formData.schedule && (
+                    <div className="mt-2 p-2 bg-blue-500/20 rounded border border-blue-500/30">
+                      <p className="text-white font-medium">Selected Plan: {getSelectedSchedulePrice()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Channel Name</Label>
@@ -274,21 +298,38 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                   className="bg-white/10 border-white/20"
                 />
               </div>
+              
+              {/* Enhanced Schedule Selection with Pricing */}
               <div className="space-y-2">
-                <Label htmlFor="schedule">Posting Schedule</Label>
+                <Label htmlFor="schedule" className="flex items-center space-x-2">
+                  <span>Posting Schedule</span>
+                  <DollarSign className="w-4 h-4 text-green-400" />
+                </Label>
                 <Select value={formData.schedule} onValueChange={(value) => setFormData({...formData, schedule: value})}>
                   <SelectTrigger className="bg-white/10 border-white/20">
-                    <SelectValue placeholder="Select schedule" />
+                    <SelectValue placeholder="Select schedule & pricing" />
                   </SelectTrigger>
                   <SelectContent className="bg-gray-800 border-white/10">
                     {scheduleOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                        <div className="flex items-center justify-between w-full">
+                          <div>
+                            <span className="font-medium">{option.label}</span>
+                            <span className="text-gray-400 text-xs ml-2">({option.description})</span>
+                          </div>
+                          <span className="text-green-400 font-medium ml-4">{option.price}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {formData.schedule && (
+                  <div className="text-xs text-gray-400 mt-1">
+                    This will add {getSelectedSchedulePrice()} to your monthly subscription
+                  </div>
+                )}
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="theme">Content Theme</Label>
                 <Select value={formData.theme} onValueChange={(value) => setFormData({...formData, theme: value})}>
@@ -330,12 +371,29 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                 />
               </div>
             </div>
+
+            {/* Pricing Summary */}
+            {formData.schedule && (
+              <div className="p-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-lg border border-green-500/20 mt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-white font-medium">Subscription Summary</h4>
+                    <p className="text-gray-400 text-sm">This channel will be added to your billing</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-green-400">{getSelectedSchedulePrice()}</p>
+                    <p className="text-xs text-gray-400">per month</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end space-x-3 mt-6">
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-white/20 text-white hover:bg-white/10">
                 Cancel
               </Button>
               <Button onClick={handleCreateChannel} className="bg-blue-600 hover:bg-blue-700">
-                Create Channel
+                {formData.schedule ? `Create Channel (${getSelectedSchedulePrice()})` : "Create Channel"}
               </Button>
             </div>
           </DialogContent>
