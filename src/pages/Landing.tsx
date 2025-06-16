@@ -157,12 +157,12 @@ const Landing = () => {
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 md:px-6 py-16">
-        <Card className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-white/10 backdrop-blur-sm">
+        <Card className="bg-gradient-to-r from-blue-600/30 to-purple-600/30 border-white/20 backdrop-blur-sm">
           <CardContent className="p-8 md:p-16 text-center">
             <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
               Ready to Transform Your Content?
             </h3>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-200 mb-8 max-w-2xl mx-auto">
               Join thousands of creators who are already using ContentAI Studio to grow their audience and automate their content workflow.
             </p>
             <Button 
