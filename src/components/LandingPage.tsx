@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Users, Zap, Clock, CheckCircle, Star, LogIn, User } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -11,6 +12,15 @@ interface LandingPageProps {
 
 export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleHeaderButtonClick = () => {
+    if (user) {
+      navigate("/dashboard");
+    } else {
+      onGetStarted();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -19,7 +29,7 @@ export const LandingPage = ({ onGetStarted }: LandingPageProps) => {
         <div className="flex justify-between items-center">
           <div className="text-white font-bold text-xl">AutoContent Pro</div>
           <Button
-            onClick={onGetStarted}
+            onClick={handleHeaderButtonClick}
             variant="outline"
             className="border-white/20 text-white hover:bg-white/10"
           >
