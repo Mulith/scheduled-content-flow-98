@@ -277,7 +277,7 @@ const Index = () => {
         {activeTab === "channels" && <div className="space-y-4">
             {/* Back Button for Selected Channel */}
             {selectedChannelId && <div className="flex items-center space-x-2">
-                <Button onClick={() => setSelectedChannelId(null)} variant="outline" size="sm" className="border-white/20 hover:bg-white/10 text-slate-200">
+                <Button onClick={() => setSelectedChannelId(null)} variant="outline" size="sm" className="border-white/20 hover:bg-white/10 text-slate-400">
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Back to All Channels
                 </Button>
