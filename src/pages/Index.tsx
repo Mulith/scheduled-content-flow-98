@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlayCircle, Calendar, Palette, Mic, Video, Upload, Settings } from "lucide-react";
+import { PlayCircle, Calendar, Palette, Mic, Video, Upload, Settings, Plus, X } from "lucide-react";
 import { SocialConnections } from "@/components/SocialConnections";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { ContentCalendar } from "@/components/ContentCalendar";
@@ -11,16 +11,106 @@ import { VoiceSelector } from "@/components/VoiceSelector";
 import { ColorCustomizer } from "@/components/ColorCustomizer";
 import { ScriptPreview } from "@/components/ScriptPreview";
 import { ContentChannels } from "@/components/ContentChannels";
+import { ChannelContentTabs } from "@/components/ChannelContentTabs";
+
+interface ContentChannel {
+  id: string;
+  name: string;
+  socialAccount: {
+    platform: "youtube" | "tiktok";
+    accountName: string;
+    connected: boolean;
+  };
+  theme: {
+    id: string;
+    name: string;
+    color: string;
+  };
+  voice: {
+    id: string;
+    name: string;
+    type: "free" | "premium";
+  };
+  topic: string;
+  schedule: string;
+  status: "active" | "paused" | "setup";
+  lastGenerated?: string;
+  totalVideos: number;
+}
+
+const mockChannels: ContentChannel[] = [
+  {
+    id: "1",
+    name: "Productivity Tips",
+    socialAccount: {
+      platform: "youtube",
+      accountName: "ProductivityMaster",
+      connected: true,
+    },
+    theme: {
+      id: "productivity",
+      name: "Productivity & Self-Improvement",
+      color: "from-blue-500 to-cyan-500",
+    },
+    voice: {
+      id: "aria",
+      name: "Aria",
+      type: "free",
+    },
+    topic: "Daily productivity hacks and time management",
+    schedule: "daily",
+    status: "active",
+    lastGenerated: "2 hours ago",
+    totalVideos: 47,
+  },
+  {
+    id: "2",
+    name: "Motivational Moments",
+    socialAccount: {
+      platform: "tiktok",
+      accountName: "@motivationhub",
+      connected: true,
+    },
+    theme: {
+      id: "motivation",
+      name: "Motivational Content",
+      color: "from-orange-500 to-red-500",
+    },
+    voice: {
+      id: "alexander",
+      name: "Alexander",
+      type: "premium",
+    },
+    topic: "Inspirational quotes and success mindset",
+    schedule: "twice-daily",
+    status: "active",
+    lastGenerated: "4 hours ago",
+    totalVideos: 23,
+  },
+];
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("channels");
+  const [channels, setChannels] = useState<ContentChannel[]>(mockChannels);
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
 
   const stats = [
     { label: "Videos Created", value: "127", icon: Video },
     { label: "Total Views", value: "45.2K", icon: PlayCircle },
     { label: "Scheduled Posts", value: "23", icon: Calendar },
-    { label: "Active Channels", value: "3", icon: Settings },
+    { label: "Active Channels", value: channels.filter(c => c.status === "active").length.toString(), icon: Settings },
   ];
+
+  const handleChannelUpdate = (updatedChannels: ContentChannel[]) => {
+    setChannels(updatedChannels);
+  };
+
+  const handleChannelClick = (channelId: string) => {
+    setSelectedChannelId(channelId);
+    setActiveTab(`channel-${channelId}`);
+  };
+
+  const selectedChannel = selectedChannelId ? channels.find(c => c.id === selectedChannelId) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -51,36 +141,101 @@ const Index = () => {
       {/* Navigation */}
       <nav className="border-b border-white/10 bg-black/10 backdrop-blur-sm">
         <div className="container mx-auto px-6">
-          <div className="flex space-x-8">
-            {[
-              { id: "channels", label: "Content Channels", icon: Settings },
-              { id: "dashboard", label: "Dashboard", icon: PlayCircle },
-              { id: "connections", label: "Social Accounts", icon: Upload },
-              { id: "themes", label: "Themes", icon: Palette },
-              { id: "calendar", label: "Content Calendar", icon: Calendar },
-              { id: "voice", label: "Voice Settings", icon: Mic },
-              { id: "scripts", label: "Script Preview", icon: Video },
-            ].map((tab) => (
+          <div className="flex items-center space-x-1 overflow-x-auto">
+            {/* Global Tabs */}
+            <button
+              onClick={() => {
+                setActiveTab("dashboard");
+                setSelectedChannelId(null);
+              }}
+              className={`flex items-center space-x-2 py-4 px-4 border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "dashboard"
+                  ? "border-blue-500 text-blue-400"
+                  : "border-transparent text-gray-400 hover:text-white"
+              }`}
+            >
+              <PlayCircle className="w-4 h-4" />
+              <span className="font-medium">Dashboard</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                setActiveTab("channels");
+                setSelectedChannelId(null);
+              }}
+              className={`flex items-center space-x-2 py-4 px-4 border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "channels"
+                  ? "border-blue-500 text-blue-400"
+                  : "border-transparent text-gray-400 hover:text-white"
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              <span className="font-medium">Manage Channels</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setActiveTab("connections");
+                setSelectedChannelId(null);
+              }}
+              className={`flex items-center space-x-2 py-4 px-4 border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === "connections"
+                  ? "border-blue-500 text-blue-400"
+                  : "border-transparent text-gray-400 hover:text-white"
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              <span className="font-medium">Social Accounts</span>
+            </button>
+
+            {/* Separator */}
+            <div className="h-8 w-px bg-white/20 mx-2" />
+
+            {/* Channel Tabs */}
+            {channels.map((channel) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center space-x-2 py-4 px-2 border-b-2 transition-colors ${
-                  activeTab === tab.id
-                    ? "border-blue-500 text-blue-400"
+                key={channel.id}
+                onClick={() => handleChannelClick(channel.id)}
+                className={`flex items-center space-x-2 py-4 px-4 border-b-2 transition-colors whitespace-nowrap group ${
+                  activeTab === `channel-${channel.id}`
+                    ? "border-purple-500 text-purple-400"
                     : "border-transparent text-gray-400 hover:text-white"
                 }`}
               >
-                <tab.icon className="w-4 h-4" />
-                <span className="font-medium">{tab.label}</span>
+                <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${channel.theme.color}`} />
+                <span className="font-medium">{channel.name}</span>
+                <Badge 
+                  variant="secondary" 
+                  className={`text-xs ${
+                    channel.status === "active" 
+                      ? "bg-green-500/20 text-green-400" 
+                      : channel.status === "paused"
+                      ? "bg-yellow-500/20 text-yellow-400"
+                      : "bg-blue-500/20 text-blue-400"
+                  }`}
+                >
+                  {channel.status}
+                </Badge>
               </button>
             ))}
+
+            {/* Add Channel Button */}
+            <button
+              onClick={() => {
+                setActiveTab("channels");
+                setSelectedChannelId(null);
+              }}
+              className="flex items-center space-x-2 py-4 px-4 border-b-2 border-transparent text-gray-400 hover:text-white transition-colors whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" />
+              <span className="font-medium">Add Channel</span>
+            </button>
           </div>
         </div>
       </nav>
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
-        {activeTab === "channels" && <ContentChannels />}
         {activeTab === "dashboard" && (
           <div className="space-y-8">
             {/* Stats Grid */}
@@ -126,12 +281,13 @@ const Index = () => {
                     Connect Accounts
                   </Button>
                   <Button 
-                    onClick={() => setActiveTab("calendar")}
+                    onClick={() => channels.length > 0 && handleChannelClick(channels[0].id)}
                     variant="outline" 
                     className="border-white/20 text-white hover:bg-white/10 h-12"
+                    disabled={channels.length === 0}
                   >
                     <Calendar className="w-4 h-4 mr-2" />
-                    View Schedule
+                    View Content
                   </Button>
                 </div>
               </CardContent>
@@ -174,16 +330,15 @@ const Index = () => {
           </div>
         )}
 
-        {activeTab === "connections" && <SocialConnections />}
-        {activeTab === "themes" && <ThemeSelector />}
-        {activeTab === "calendar" && <ContentCalendar />}
-        {activeTab === "voice" && (
-          <div className="space-y-6">
-            <VoiceSelector />
-            <ColorCustomizer />
-          </div>
+        {activeTab === "channels" && (
+          <ContentChannels onChannelsUpdate={handleChannelUpdate} />
         )}
-        {activeTab === "scripts" && <ScriptPreview />}
+
+        {activeTab === "connections" && <SocialConnections />}
+
+        {activeTab.startsWith("channel-") && selectedChannel && (
+          <ChannelContentTabs channel={selectedChannel} onChannelUpdate={handleChannelUpdate} />
+        )}
       </main>
     </div>
   );

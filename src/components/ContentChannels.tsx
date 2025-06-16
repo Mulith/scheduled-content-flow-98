@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target } from "lucide-react";
+import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface ContentChannel {
@@ -110,7 +109,11 @@ const scheduleOptions = [
   { value: "monthly", label: "Monthly" },
 ];
 
-export const ContentChannels = () => {
+interface ContentChannelsProps {
+  onChannelsUpdate?: (channels: ContentChannel[]) => void;
+}
+
+export const ContentChannels = ({ onChannelsUpdate }: ContentChannelsProps) => {
   const [channels, setChannels] = useState<ContentChannel[]>(mockChannels);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<ContentChannel | null>(null);
@@ -198,6 +201,11 @@ export const ContentChannels = () => {
       case "setup": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
       default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
+  };
+
+  const handleChannelClick = (channelId: string) => {
+    // This will be handled by the parent component's navigation
+    console.log(`Channel ${channelId} clicked - navigation handled by parent`);
   };
 
   return (
@@ -325,7 +333,7 @@ export const ContentChannels = () => {
       {/* Channels Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {channels.map((channel) => (
-          <Card key={channel.id} className="bg-black/40 border-white/10 backdrop-blur-sm">
+          <Card key={channel.id} className="bg-black/40 border-white/10 backdrop-blur-sm hover:bg-black/60 transition-colors group cursor-pointer">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
@@ -337,7 +345,10 @@ export const ContentChannels = () => {
                     )}
                   </div>
                   <div>
-                    <CardTitle className="text-white">{channel.name}</CardTitle>
+                    <div className="flex items-center space-x-2">
+                      <CardTitle className="text-white">{channel.name}</CardTitle>
+                      <ExternalLink className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                     <CardDescription className="text-gray-400">
                       {channel.socialAccount.accountName}
                     </CardDescription>
