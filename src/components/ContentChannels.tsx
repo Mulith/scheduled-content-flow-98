@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar, DollarSign, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useYouTubeChannels } from "@/hooks/useYouTubeChannels";
 
 interface ContentChannel {
   id: string;
@@ -112,12 +113,13 @@ const topicCategories = [
   "Education & Learning",
 ];
 
-// Mock connected social accounts
+// Mock connected social accounts - now integrated with real YouTube data
 const mockConnectedAccounts = {
-  youtube: ["ProductivityMaster", "TechReviews2024", "CookingWithSarah"],
+  youtube: [], // This will be populated from real data
   tiktok: ["@motivationhub", "@techtalks", "@foodiefinds", "@lifehacks101"],
 };
 
+// Predefined theme categories
 const availableThemes = [
   { id: "productivity", name: "Productivity & Self-Improvement", color: "from-blue-500 to-cyan-500" },
   { id: "motivation", name: "Motivational Content", color: "from-orange-500 to-red-500" },
@@ -125,6 +127,7 @@ const availableThemes = [
   { id: "knowledge", name: "Quick Learning & Facts", color: "from-purple-500 to-pink-500" },
 ];
 
+// Predefined voice options
 const availableVoices = [
   { id: "aria", name: "Aria", type: "free" as const },
   { id: "marcus", name: "Marcus", type: "free" as const },
@@ -134,6 +137,7 @@ const availableVoices = [
   { id: "james", name: "James", type: "premium" as const },
 ];
 
+// Predefined schedule options
 const scheduleOptions = [
   { value: "twice-daily", label: "2x Daily", price: "$45/month", description: "Two posts per day" },
   { value: "daily", label: "Daily", price: "$30/month", description: "One post per day" },
@@ -161,6 +165,9 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     topic: "",
     schedule: "",
   });
+
+  // Add YouTube channels hook
+  const { channels: youtubeChannels, connectYouTube, loading: youtubeLoading } = useYouTubeChannels();
 
   const resetForm = () => {
     setFormData({
@@ -285,7 +292,16 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
   const getAvailableAccounts = () => {
     if (!formData.platform) return [];
+    
+    if (formData.platform === 'youtube') {
+      return youtubeChannels.map(channel => channel.channel_name);
+    }
+    
     return mockConnectedAccounts[formData.platform as keyof typeof mockConnectedAccounts] || [];
+  };
+
+  const handleConnectYouTube = () => {
+    connectYouTube();
   };
 
   return (
@@ -371,7 +387,21 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                       ))}
                     </SelectContent>
                   </Select>
-                  {formData.platform && getAvailableAccounts().length === 0 && (
+                  {formData.platform === 'youtube' && youtubeChannels.length === 0 && !youtubeLoading && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-yellow-400">No YouTube channels connected.</p>
+                      <Button 
+                        type="button"
+                        onClick={handleConnectYouTube}
+                        size="sm"
+                        className="w-full bg-red-600 hover:bg-red-700"
+                      >
+                        <Youtube className="w-4 h-4 mr-2" />
+                        Connect YouTube Account
+                      </Button>
+                    </div>
+                  )}
+                  {formData.platform && formData.platform !== 'youtube' && getAvailableAccounts().length === 0 && (
                     <p className="text-xs text-yellow-400">No connected accounts found. Connect your {formData.platform} account first.</p>
                   )}
                 </div>

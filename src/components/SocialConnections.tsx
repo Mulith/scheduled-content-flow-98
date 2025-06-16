@@ -4,31 +4,41 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Youtube, Music } from "lucide-react";
+import { Youtube, Music, Users, Video, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useYouTubeChannels } from "@/hooks/useYouTubeChannels";
 
 export const SocialConnections = () => {
-  const [connections, setConnections] = useState({
-    youtube: { connected: false, enabled: false },
-    tiktok: { connected: false, enabled: false },
+  const [tiktokConnection, setTiktokConnection] = useState({
+    connected: false, 
+    enabled: false 
   });
 
-  const handleConnect = (platform: string) => {
-    setConnections(prev => ({
-      ...prev,
-      [platform]: { ...prev[platform], connected: true }
-    }));
+  const { 
+    channels: youtubeChannels, 
+    loading: youtubeLoading, 
+    connectYouTube, 
+    disconnectChannel 
+  } = useYouTubeChannels();
+
+  const handleConnectTikTok = () => {
+    setTiktokConnection(prev => ({ ...prev, connected: true }));
     toast({
       title: "Connection Successful",
-      description: `${platform.charAt(0).toUpperCase() + platform.slice(1)} account connected successfully!`,
+      description: "TikTok account connected successfully!",
     });
   };
 
-  const handleToggle = (platform: string) => {
-    setConnections(prev => ({
-      ...prev,
-      [platform]: { ...prev[platform], enabled: !prev[platform].enabled }
-    }));
+  const handleToggleTikTok = () => {
+    setTiktokConnection(prev => ({ ...prev, enabled: !prev.enabled }));
+  };
+
+  const handleDisconnectYouTube = async (channelId: string) => {
+    await disconnectChannel(channelId);
+    toast({
+      title: "Channel Disconnected",
+      description: "YouTube channel has been disconnected successfully.",
+    });
   };
 
   return (
@@ -53,40 +63,81 @@ export const SocialConnections = () => {
                 </div>
               </div>
               <Badge 
-                variant={connections.youtube.connected ? "default" : "secondary"}
-                className={connections.youtube.connected 
+                variant={youtubeChannels.length > 0 ? "default" : "secondary"}
+                className={youtubeChannels.length > 0
                   ? "bg-green-500/20 text-green-400 border-green-500/30"
                   : "bg-gray-500/20 text-gray-400 border-gray-500/30"
                 }
               >
-                {connections.youtube.connected ? "Connected" : "Not Connected"}
+                {youtubeChannels.length > 0 ? `${youtubeChannels.length} Connected` : "Not Connected"}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {connections.youtube.connected ? (
+            {youtubeLoading ? (
+              <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                <p className="text-blue-400 text-sm">Loading YouTube channels...</p>
+              </div>
+            ) : youtubeChannels.length > 0 ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-white">Enable auto-posting</span>
-                  <Switch 
-                    checked={connections.youtube.enabled}
-                    onCheckedChange={() => handleToggle('youtube')}
-                  />
-                </div>
-                <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <p className="text-green-400 text-sm">
-                    ✓ Connected to: YourChannel (@yourchannel)
-                  </p>
-                  <p className="text-green-400 text-sm">
-                    ✓ Permissions: Upload videos, manage channel
-                  </p>
-                </div>
+                {youtubeChannels.map((channel) => (
+                  <div key={channel.id} className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {channel.thumbnail_url && (
+                          <img 
+                            src={channel.thumbnail_url} 
+                            alt={channel.channel_name}
+                            className="w-8 h-8 rounded-full"
+                          />
+                        )}
+                        <div>
+                          <p className="text-green-400 font-medium">{channel.channel_name}</p>
+                          {channel.channel_handle && (
+                            <p className="text-green-300 text-sm">@{channel.channel_handle}</p>
+                          )}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDisconnectYouTube(channel.id)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Users className="w-4 h-4 text-green-400" />
+                        <span className="text-green-300">
+                          {channel.subscriber_count.toLocaleString()} subscribers
+                        </span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Video className="w-4 h-4 text-green-400" />
+                        <span className="text-green-300">
+                          {channel.video_count.toLocaleString()} videos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <Button 
+                  onClick={connectYouTube}
+                  variant="outline"
+                  className="w-full border-red-600 text-red-400 hover:bg-red-600 hover:text-white"
+                >
+                  <Youtube className="w-4 h-4 mr-2" />
+                  Connect Another Channel
+                </Button>
               </div>
             ) : (
               <Button 
-                onClick={() => handleConnect('youtube')}
+                onClick={connectYouTube}
                 className="w-full bg-red-600 hover:bg-red-700"
               >
+                <Youtube className="w-4 h-4 mr-2" />
                 Connect YouTube Account
               </Button>
             )}
@@ -107,24 +158,24 @@ export const SocialConnections = () => {
                 </div>
               </div>
               <Badge 
-                variant={connections.tiktok.connected ? "default" : "secondary"}
-                className={connections.tiktok.connected 
+                variant={tiktokConnection.connected ? "default" : "secondary"}
+                className={tiktokConnection.connected 
                   ? "bg-green-500/20 text-green-400 border-green-500/30"
                   : "bg-gray-500/20 text-gray-400 border-gray-500/30"
                 }
               >
-                {connections.tiktok.connected ? "Connected" : "Not Connected"}
+                {tiktokConnection.connected ? "Connected" : "Not Connected"}
               </Badge>
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {connections.tiktok.connected ? (
+            {tiktokConnection.connected ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-white">Enable auto-posting</span>
                   <Switch 
-                    checked={connections.tiktok.enabled}
-                    onCheckedChange={() => handleToggle('tiktok')}
+                    checked={tiktokConnection.enabled}
+                    onCheckedChange={handleToggleTikTok}
                   />
                 </div>
                 <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
@@ -137,12 +188,20 @@ export const SocialConnections = () => {
                 </div>
               </div>
             ) : (
-              <Button 
-                onClick={() => handleConnect('tiktok')}
-                className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
-              >
-                Connect TikTok Account
-              </Button>
+              <div className="space-y-4">
+                <Button 
+                  onClick={handleConnectTikTok}
+                  className="w-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700"
+                >
+                  <Music className="w-4 h-4 mr-2" />
+                  Connect TikTok Account
+                </Button>
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <p className="text-yellow-400 text-sm">
+                    ⚠️ TikTok integration is coming soon! Currently in development.
+                  </p>
+                </div>
+              </div>
             )}
           </CardContent>
         </Card>
