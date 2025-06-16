@@ -111,9 +111,10 @@ const scheduleOptions = [
 
 interface ContentChannelsProps {
   onChannelsUpdate?: (channels: ContentChannel[]) => void;
+  onChannelSelect?: (channelId: string | null) => void;
 }
 
-export const ContentChannels = ({ onChannelsUpdate }: ContentChannelsProps) => {
+export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentChannelsProps) => {
   const [channels, setChannels] = useState<ContentChannel[]>(mockChannels);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<ContentChannel | null>(null);
@@ -168,7 +169,9 @@ export const ContentChannels = ({ onChannelsUpdate }: ContentChannelsProps) => {
       totalVideos: 0,
     };
 
-    setChannels([...channels, newChannel]);
+    const updatedChannels = [...channels, newChannel];
+    setChannels(updatedChannels);
+    onChannelsUpdate?.(updatedChannels);
     setIsCreateDialogOpen(false);
     resetForm();
     
@@ -179,7 +182,9 @@ export const ContentChannels = ({ onChannelsUpdate }: ContentChannelsProps) => {
   };
 
   const handleDeleteChannel = (channelId: string) => {
-    setChannels(channels.filter(c => c.id !== channelId));
+    const updatedChannels = channels.filter(c => c.id !== channelId);
+    setChannels(updatedChannels);
+    onChannelsUpdate?.(updatedChannels);
     toast({
       title: "Channel Deleted",
       description: "Content channel has been removed",
@@ -187,11 +192,13 @@ export const ContentChannels = ({ onChannelsUpdate }: ContentChannelsProps) => {
   };
 
   const handleToggleStatus = (channelId: string) => {
-    setChannels(channels.map(channel => 
+    const updatedChannels = channels.map(channel => 
       channel.id === channelId 
         ? { ...channel, status: channel.status === "active" ? "paused" : "active" as const }
         : channel
-    ));
+    );
+    setChannels(updatedChannels);
+    onChannelsUpdate?.(updatedChannels);
   };
 
   const getStatusColor = (status: string) => {
@@ -204,16 +211,14 @@ export const ContentChannels = ({ onChannelsUpdate }: ContentChannelsProps) => {
   };
 
   const handleChannelClick = (channelId: string) => {
-    // This will be handled by the parent component's navigation
-    console.log(`Channel ${channelId} clicked - navigation handled by parent`);
+    onChannelSelect?.(channelId);
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-white mb-2">Content Channels</h2>
-          <p className="text-gray-400">Manage your content channels with unique themes, voices, and topics</p>
+          <p className="text-gray-400">Create and manage your content channels</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
@@ -333,7 +338,11 @@ export const ContentChannels = ({ onChannelsUpdate }: ContentChannelsProps) => {
       {/* Channels Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {channels.map((channel) => (
-          <Card key={channel.id} className="bg-black/40 border-white/10 backdrop-blur-sm hover:bg-black/60 transition-colors group cursor-pointer">
+          <Card 
+            key={channel.id} 
+            className="bg-black/40 border-white/10 backdrop-blur-sm hover:bg-black/60 transition-colors group cursor-pointer"
+            onClick={() => handleChannelClick(channel.id)}
+          >
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center space-x-3">
@@ -359,17 +368,17 @@ export const ContentChannels = ({ onChannelsUpdate }: ContentChannelsProps) => {
                     {channel.status}
                   </Badge>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
+                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="bg-gray-800 border-white/10">
-                      <DropdownMenuItem onClick={() => handleToggleStatus(channel.id)} className="text-white hover:bg-white/10">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleToggleStatus(channel.id); }} className="text-white hover:bg-white/10">
                         <Edit className="w-4 h-4 mr-2" />
                         {channel.status === "active" ? "Pause" : "Activate"}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteChannel(channel.id)} className="text-red-400 hover:bg-red-500/10">
+                      <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleDeleteChannel(channel.id); }} className="text-red-400 hover:bg-red-500/10">
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
