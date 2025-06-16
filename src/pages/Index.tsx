@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,9 +107,8 @@ const Index = () => {
     setChannels(updatedChannels);
   };
 
-  const handleChannelClick = (channelId: string) => {
+  const handleChannelSelect = (channelId: string | null) => {
     setSelectedChannelId(channelId);
-    setActiveTab(`channel-${channelId}`);
   };
 
   const selectedChannel = selectedChannelId ? channels.find(c => c.id === selectedChannelId) : null;
@@ -145,7 +145,7 @@ const Index = () => {
         }`}
       >
         <Settings className="w-4 h-4" />
-        <span className="font-medium">Manage Channels</span>
+        <span className="font-medium">Channels</span>
       </button>
 
       <button
@@ -162,53 +162,6 @@ const Index = () => {
       >
         <Upload className="w-4 h-4" />
         <span className="font-medium">Social Accounts</span>
-      </button>
-
-      {/* Separator */}
-      <div className="h-px md:h-8 w-full md:w-px bg-white/20 mx-0 md:mx-2 my-2 md:my-0" />
-
-      {/* Channel Tabs */}
-      {channels.map((channel) => (
-        <button
-          key={channel.id}
-          onClick={() => {
-            handleChannelClick(channel.id);
-            setIsMobileMenuOpen(false);
-          }}
-          className={`flex items-center justify-start md:justify-center space-x-2 py-3 md:py-4 px-4 border-b-2 md:border-b-2 border-r-0 md:border-r-0 transition-colors whitespace-nowrap group text-left md:text-center ${
-            activeTab === `channel-${channel.id}`
-              ? "border-purple-500 text-purple-400 bg-purple-500/10 md:bg-transparent"
-              : "border-transparent text-gray-400 hover:text-white hover:bg-white/5 md:hover:bg-transparent"
-          }`}
-        >
-          <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${channel.theme.color}`} />
-          <span className="font-medium">{channel.name}</span>
-          <Badge 
-            variant="secondary" 
-            className={`text-xs ml-auto md:ml-0 ${
-              channel.status === "active" 
-                ? "bg-green-500/20 text-green-400" 
-                : channel.status === "paused"
-                ? "bg-yellow-500/20 text-yellow-400"
-                : "bg-blue-500/20 text-blue-400"
-            }`}
-          >
-            {channel.status}
-          </Badge>
-        </button>
-      ))}
-
-      {/* Add Channel Button */}
-      <button
-        onClick={() => {
-          setActiveTab("channels");
-          setSelectedChannelId(null);
-          setIsMobileMenuOpen(false);
-        }}
-        className="flex items-center justify-start md:justify-center space-x-2 py-3 md:py-4 px-4 border-b-2 border-transparent text-gray-400 hover:text-white transition-colors whitespace-nowrap text-left md:text-center hover:bg-white/5 md:hover:bg-transparent"
-      >
-        <Plus className="w-4 h-4" />
-        <span className="font-medium">Add Channel</span>
       </button>
     </div>
   );
@@ -306,7 +259,12 @@ const Index = () => {
                     Connect Accounts
                   </Button>
                   <Button 
-                    onClick={() => channels.length > 0 && handleChannelClick(channels[0].id)}
+                    onClick={() => {
+                      setActiveTab("channels");
+                      if (channels.length > 0) {
+                        setSelectedChannelId(channels[0].id);
+                      }
+                    }}
                     variant="outline" 
                     className="border-white/20 text-white hover:bg-white/10 h-12"
                     disabled={channels.length === 0}
@@ -356,14 +314,67 @@ const Index = () => {
         )}
 
         {activeTab === "channels" && (
-          <ContentChannels onChannelsUpdate={handleChannelUpdate} />
+          <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-white">Content Channels</h2>
+                <p className="text-gray-400 text-sm md:text-base">Create and manage your content channels</p>
+              </div>
+            </div>
+
+            {/* Channel Selector */}
+            {channels.length > 0 && (
+              <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-white text-lg md:text-xl">Select Channel</CardTitle>
+                  <CardDescription className="text-gray-400">
+                    Choose a channel to manage its content and settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {channels.map((channel) => (
+                      <button
+                        key={channel.id}
+                        onClick={() => handleChannelSelect(channel.id)}
+                        className={`p-4 rounded-lg border-2 transition-all text-left hover:scale-105 ${
+                          selectedChannelId === channel.id
+                            ? "border-purple-500 bg-purple-500/10"
+                            : "border-white/10 bg-white/5 hover:border-white/20"
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${channel.theme.color}`} />
+                          <h3 className="text-white font-medium">{channel.name}</h3>
+                          <Badge className={`text-xs ${
+                            channel.status === "active" 
+                              ? "bg-green-500/20 text-green-400" 
+                              : channel.status === "paused"
+                              ? "bg-yellow-500/20 text-yellow-400"
+                              : "bg-blue-500/20 text-blue-400"
+                          }`}>
+                            {channel.status}
+                          </Badge>
+                        </div>
+                        <p className="text-gray-400 text-sm">{channel.socialAccount.accountName}</p>
+                        <p className="text-gray-500 text-xs mt-1">{channel.totalVideos} videos</p>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Selected Channel Content or Channel Management */}
+            {selectedChannel ? (
+              <ChannelContentTabs channel={selectedChannel} onChannelUpdate={handleChannelUpdate} />
+            ) : (
+              <ContentChannels onChannelsUpdate={handleChannelUpdate} />
+            )}
+          </div>
         )}
 
         {activeTab === "connections" && <SocialConnections />}
-
-        {activeTab.startsWith("channel-") && selectedChannel && (
-          <ChannelContentTabs channel={selectedChannel} onChannelUpdate={handleChannelUpdate} />
-        )}
       </main>
     </div>
   );
