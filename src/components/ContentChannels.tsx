@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -192,11 +193,13 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
   };
 
   const handleToggleStatus = (channelId: string) => {
-    const updatedChannels = channels.map(channel => 
-      channel.id === channelId 
-        ? { ...channel, status: channel.status === "active" ? "paused" : "active" as const }
-        : channel
-    );
+    const updatedChannels = channels.map(channel => {
+      if (channel.id === channelId) {
+        const newStatus: "active" | "paused" = channel.status === "active" ? "paused" : "active";
+        return { ...channel, status: newStatus };
+      }
+      return channel;
+    });
     setChannels(updatedChannels);
     onChannelsUpdate?.(updatedChannels);
   };
