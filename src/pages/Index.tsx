@@ -3,22 +3,23 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlayCircle, Calendar, Palette, Mic, Video, Upload } from "lucide-react";
+import { PlayCircle, Calendar, Palette, Mic, Video, Upload, Settings } from "lucide-react";
 import { SocialConnections } from "@/components/SocialConnections";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { ContentCalendar } from "@/components/ContentCalendar";
 import { VoiceSelector } from "@/components/VoiceSelector";
 import { ColorCustomizer } from "@/components/ColorCustomizer";
 import { ScriptPreview } from "@/components/ScriptPreview";
+import { ContentChannels } from "@/components/ContentChannels";
 
 const Index = () => {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("channels");
 
   const stats = [
     { label: "Videos Created", value: "127", icon: Video },
     { label: "Total Views", value: "45.2K", icon: PlayCircle },
     { label: "Scheduled Posts", value: "23", icon: Calendar },
-    { label: "Active Themes", value: "8", icon: Palette },
+    { label: "Active Channels", value: "3", icon: Settings },
   ];
 
   return (
@@ -52,6 +53,7 @@ const Index = () => {
         <div className="container mx-auto px-6">
           <div className="flex space-x-8">
             {[
+              { id: "channels", label: "Content Channels", icon: Settings },
               { id: "dashboard", label: "Dashboard", icon: PlayCircle },
               { id: "connections", label: "Social Accounts", icon: Upload },
               { id: "themes", label: "Themes", icon: Palette },
@@ -78,6 +80,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
+        {activeTab === "channels" && <ContentChannels />}
         {activeTab === "dashboard" && (
           <div className="space-y-8">
             {/* Stats Grid */}
@@ -108,19 +111,19 @@ const Index = () => {
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Button 
-                    onClick={() => setActiveTab("connections")}
+                    onClick={() => setActiveTab("channels")}
                     className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-12"
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Connect Social Accounts
+                    <Settings className="w-4 h-4 mr-2" />
+                    Manage Channels
                   </Button>
                   <Button 
-                    onClick={() => setActiveTab("themes")}
+                    onClick={() => setActiveTab("connections")}
                     variant="outline" 
                     className="border-white/20 text-white hover:bg-white/10 h-12"
                   >
-                    <Palette className="w-4 h-4 mr-2" />
-                    Choose Themes
+                    <Upload className="w-4 h-4 mr-2" />
+                    Connect Accounts
                   </Button>
                   <Button 
                     onClick={() => setActiveTab("calendar")}
@@ -128,7 +131,7 @@ const Index = () => {
                     className="border-white/20 text-white hover:bg-white/10 h-12"
                   >
                     <Calendar className="w-4 h-4 mr-2" />
-                    Set Schedule
+                    View Schedule
                   </Button>
                 </div>
               </CardContent>
@@ -142,14 +145,14 @@ const Index = () => {
               <CardContent>
                 <div className="space-y-4">
                   {[
-                    { action: "Video generated", title: "5 Morning Productivity Tips", time: "2 hours ago", status: "completed" },
-                    { action: "Script created", title: "Why You Need This Habit", time: "4 hours ago", status: "processing" },
-                    { action: "Posted to YouTube", title: "Transform Your Day in 60 Seconds", time: "1 day ago", status: "live" },
+                    { action: "Video generated", title: "5 Morning Productivity Tips", time: "2 hours ago", status: "completed", channel: "Productivity Tips" },
+                    { action: "Script created", title: "Why You Need This Habit", time: "4 hours ago", status: "processing", channel: "Motivational Moments" },
+                    { action: "Posted to YouTube", title: "Transform Your Day in 60 Seconds", time: "1 day ago", status: "live", channel: "Productivity Tips" },
                   ].map((item, index) => (
                     <div key={index} className="flex items-center justify-between p-4 bg-white/5 rounded-lg">
                       <div>
                         <p className="text-white font-medium">{item.title}</p>
-                        <p className="text-gray-400 text-sm">{item.action} • {item.time}</p>
+                        <p className="text-gray-400 text-sm">{item.action} • {item.channel} • {item.time}</p>
                       </div>
                       <Badge 
                         variant={item.status === "live" ? "default" : "secondary"}
