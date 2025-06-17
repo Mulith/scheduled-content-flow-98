@@ -120,17 +120,23 @@ export const ChannelCreation = ({
         schedule: selectedSchedule,
       };
       
+      console.log("Dialog mode - calling onSubmit with:", { formData, selectedVideoStyles: selectedVideoTypes });
       onSubmit({ formData, selectedVideoStyles: selectedVideoTypes });
       return;
     }
 
     // Default behavior: create checkout session
+    console.log("=== STARTING STRIPE CHECKOUT ===");
+    console.log("Calling createCheckoutSession with:", { selectedSchedule, channelName, channelData });
+    
     const success = await createCheckoutSession(selectedSchedule, channelName, channelData);
+    
+    console.log("Checkout session result:", success);
+    
     if (success) {
-      toast({
-        title: "Redirecting to Checkout",
-        description: "Opening Stripe checkout in a new tab...",
-      });
+      console.log("Checkout session created successfully");
+    } else {
+      console.error("Failed to create checkout session");
     }
   };
 
