@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
 export const useYouTubeAuth = () => {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isDisconnecting, setIsDisconnecting] = useState(false);
 
   const connectYouTube = async () => {
     try {
@@ -28,6 +28,36 @@ export const useYouTubeAuth = () => {
         variant: "destructive",
       });
       setIsConnecting(false);
+    }
+  };
+
+  const disconnectYouTube = async () => {
+    try {
+      setIsDisconnecting(true);
+      
+      const { data, error } = await supabase.functions.invoke('youtube-auth', {
+        body: { action: 'disconnect' }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Disconnected! 👋",
+        description: "YouTube account has been disconnected successfully.",
+      });
+
+      return true;
+      
+    } catch (error) {
+      console.error('YouTube disconnection error:', error);
+      toast({
+        title: "Disconnection Failed",
+        description: "Failed to disconnect YouTube account.",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsDisconnecting(false);
     }
   };
 
@@ -83,7 +113,9 @@ export const useYouTubeAuth = () => {
 
   return {
     isConnecting,
+    isDisconnecting,
     connectYouTube,
+    disconnectYouTube,
     handleOAuthCallback,
     fetchConnectedChannels,
   };

@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Youtube, Music, ExternalLink, Users, Video, CheckCircle } from "lucide-react";
+import { Youtube, Music, ExternalLink, Users, Video, CheckCircle, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
 
@@ -15,7 +14,7 @@ export const SocialConnections = () => {
   });
   
   const [youtubeChannels, setYoutubeChannels] = useState<any[]>([]);
-  const { isConnecting, connectYouTube, handleOAuthCallback, fetchConnectedChannels } = useYouTubeAuth();
+  const { isConnecting, isDisconnecting, connectYouTube, disconnectYouTube, handleOAuthCallback, fetchConnectedChannels } = useYouTubeAuth();
 
   // Check for OAuth callback
   useEffect(() => {
@@ -50,6 +49,15 @@ export const SocialConnections = () => {
 
   const handleConnectYouTube = async () => {
     await connectYouTube();
+  };
+
+  const handleDisconnectYouTube = async () => {
+    try {
+      await disconnectYouTube();
+      await loadYouTubeChannels();
+    } catch (error) {
+      // Error is already handled in the hook
+    }
   };
 
   const handleConnect = (platform: string) => {
@@ -158,6 +166,22 @@ export const SocialConnections = () => {
                     onCheckedChange={() => handleToggle('youtube')}
                   />
                 </div>
+
+                <Button 
+                  onClick={handleDisconnectYouTube}
+                  disabled={isDisconnecting}
+                  variant="outline"
+                  className="w-full border-red-500/30 text-red-400 hover:bg-red-500/10"
+                >
+                  {isDisconnecting ? (
+                    "Disconnecting..."
+                  ) : (
+                    <>
+                      <X className="w-4 h-4 mr-2" />
+                      Disconnect YouTube
+                    </>
+                  )}
+                </Button>
               </div>
             ) : (
               <Button 

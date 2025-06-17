@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -48,6 +47,28 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ authUrl: authUrl.toString() }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (action === 'disconnect') {
+      const { error } = await supabaseClient
+        .from('youtube_channels')
+        .delete()
+        .eq('user_id', user.id)
+
+      if (error) {
+        console.error('Database error during disconnect:', error)
+        throw new Error('Failed to disconnect YouTube channels')
+      }
+
+      console.log(`Disconnected all YouTube channels for user: ${user.id}`)
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'YouTube account disconnected successfully'
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
