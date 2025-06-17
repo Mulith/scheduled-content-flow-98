@@ -46,17 +46,23 @@ export const useContentQueue = () => {
   const triggerMonitoring = useMutation({
     mutationFn: async () => {
       console.log('Triggering content monitoring...');
-      const { data, error } = await supabase.functions.invoke('content-monitor', {
-        body: {}
-      });
       
-      if (error) {
-        console.error('Content monitor error:', error);
-        throw error;
+      try {
+        const { data, error } = await supabase.functions.invoke('content-monitor', {
+          body: {}
+        });
+        
+        if (error) {
+          console.error('Content monitor error details:', error);
+          throw new Error(`Content monitor failed: ${error.message || 'Unknown error'}`);
+        }
+        
+        console.log('Content monitor response:', data);
+        return data;
+      } catch (err) {
+        console.error('Failed to invoke content monitor:', err);
+        throw err;
       }
-      
-      console.log('Content monitor response:', data);
-      return data;
     },
     onSuccess: (data) => {
       console.log('Content monitoring triggered successfully:', data);
@@ -81,17 +87,23 @@ export const useContentQueue = () => {
   const triggerGeneration = useMutation({
     mutationFn: async () => {
       console.log('Triggering content generation...');
-      const { data, error } = await supabase.functions.invoke('content-generator', {
-        body: {}
-      });
       
-      if (error) {
-        console.error('Content generator error:', error);
-        throw error;
+      try {
+        const { data, error } = await supabase.functions.invoke('content-generator', {
+          body: {}
+        });
+        
+        if (error) {
+          console.error('Content generator error details:', error);
+          throw new Error(`Content generator failed: ${error.message || 'Unknown error'}`);
+        }
+        
+        console.log('Content generator response:', data);
+        return data;
+      } catch (err) {
+        console.error('Failed to invoke content generator:', err);
+        throw err;
       }
-      
-      console.log('Content generator response:', data);
-      return data;
     },
     onSuccess: (data) => {
       console.log('Content generation triggered successfully:', data);

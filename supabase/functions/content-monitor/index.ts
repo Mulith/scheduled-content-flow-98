@@ -8,17 +8,27 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log('Content monitor function started')
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
+    console.log('Creating Supabase client...')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing environment variables')
+      throw new Error('Missing Supabase configuration')
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+    console.log('Supabase client created successfully')
 
     // Get channels that need checking and are active
+    console.log('Fetching channels to check...')
     const { data: channelsToCheck, error: channelsError } = await supabase
       .from('content_monitoring_queue')
       .select(`
@@ -40,20 +50,26 @@ serve(async (req) => {
 
     if (channelsError) {
       console.error('Error fetching channels to check:', channelsError)
-      return new Response(JSON.stringify({ error: channelsError.message }), {
+      return new Response(JSON.stringify({ 
+        error: channelsError.message,
+        details: 'Failed to fetch channels from monitoring queue'
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    console.log(`Found ${channelsToCheck?.length || 0} channels to check`)
+    console.log(`Found ${channelsToCheck?.length || 0} channels to check:`, channelsToCheck?.map(c => c.content_channels?.name))
+
+    let channelsProcessed = 0;
 
     for (const queueItem of channelsToCheck || []) {
       const channel = queueItem.content_channels
       
-      console.log(`Checking channel: ${channel.name} (ID: ${channel.id})`)
+      console.log(`Processing channel: ${channel.name} (ID: ${channel.id})`)
       
       // Count existing content items with status 'ready' or 'published'
+      console.log(`Counting content for channel ${channel.id}...`)
       const { count: contentCount, error: countError } = await supabase
         .from('content_items')
         .select('*', { count: 'exact', head: true })
@@ -65,7 +81,10 @@ serve(async (req) => {
         continue
       }
 
+      console.log(`Channel ${channel.name} currently has ${contentCount || 0} content items`)
+
       // Get content requirements based on schedule
+      console.log(`Getting requirements for schedule: ${channel.schedule}`)
       const { data: requirementData, error: reqError } = await supabase
         .rpc('get_content_requirements', { schedule_type: channel.schedule })
 
@@ -99,6 +118,7 @@ serve(async (req) => {
         }
 
         if (!existingGeneration) {
+          console.log(`Adding ${itemsToGenerate} items to generation queue for channel ${channel.name}`)
           // Add to generation queue
           const { error: insertError } = await supabase
             .from('content_generation_queue')
@@ -113,7 +133,7 @@ serve(async (req) => {
           if (insertError) {
             console.error(`Error adding to generation queue for channel ${channel.id}:`, insertError)
           } else {
-            console.log(`✅ Added ${itemsToGenerate} items to generation queue for channel ${channel.name}`)
+            console.log(`✅ Successfully added ${itemsToGenerate} items to generation queue for channel ${channel.name}`)
           }
         } else {
           console.log(`Channel ${channel.name} already has a ${existingGeneration.status} generation request for ${existingGeneration.items_to_generate} items`)
@@ -129,24 +149,33 @@ serve(async (req) => {
 
       const nextCheckTime = new Date(Date.now() + getIntervalMs(nextCheckInterval)).toISOString()
       
-      console.log(`Next check for channel ${channel.name} scheduled for: ${nextCheckTime}`)
+      console.log(`Updating next check for channel ${channel.name} to: ${nextCheckTime}`)
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('content_monitoring_queue')
         .update({
           last_checked_at: new Date().toISOString(),
           next_check_at: nextCheckTime
         })
         .eq('id', queueItem.id)
+
+      if (updateError) {
+        console.error(`Error updating monitoring queue for channel ${channel.id}:`, updateError)
+      } else {
+        console.log(`✅ Updated monitoring queue for channel ${channel.name}`)
+      }
+
+      channelsProcessed++
     }
 
     const summary = {
       success: true, 
-      channelsChecked: channelsToCheck?.length || 0,
+      channelsChecked: channelsProcessed,
+      totalChannelsFound: channelsToCheck?.length || 0,
       timestamp: new Date().toISOString()
     }
 
-    console.log('Content monitoring completed:', summary)
+    console.log('Content monitoring completed successfully:', summary)
 
     return new Response(JSON.stringify(summary), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -154,7 +183,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Content monitor error:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ 
+      error: error.message,
+      stack: error.stack 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
