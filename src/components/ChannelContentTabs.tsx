@@ -4,10 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Palette, Mic, Video, FileText, Settings, Youtube, Music } from "lucide-react";
 import { ContentCalendar } from "@/components/ContentCalendar";
-import { VoiceSelector } from "@/components/VoiceSelector";
+import { VoiceSelectorWithPreview } from "@/components/VoiceSelectorWithPreview";
 import { ColorCustomizer } from "@/components/ColorCustomizer";
 import { ScriptPreview } from "@/components/ScriptPreview";
-import { ThemeSelector } from "@/components/ThemeSelector";
 
 interface ContentChannel {
   id: string;
@@ -41,6 +40,15 @@ interface ChannelContentTabsProps {
 
 export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentTabsProps) => {
   const [activeSubTab, setActiveSubTab] = useState("overview");
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+
+  const handleVoicePreview = (voiceId: string) => {
+    if (playingVoice === voiceId) {
+      setPlayingVoice(null);
+      return;
+    }
+    setPlayingVoice(voiceId);
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -213,7 +221,6 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 md:space-y-6">
-                <ThemeSelector />
                 <ColorCustomizer />
               </CardContent>
             </Card>
@@ -226,7 +233,15 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <VoiceSelector />
+                <VoiceSelectorWithPreview
+                  selectedVoice={channel.voice.id}
+                  onVoiceSelect={(voiceId) => {
+                    // Handle voice selection update
+                    console.log("Voice selected:", voiceId);
+                  }}
+                  playingVoice={playingVoice}
+                  onVoicePreview={handleVoicePreview}
+                />
               </CardContent>
             </Card>
           </div>
