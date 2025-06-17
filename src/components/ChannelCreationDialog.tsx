@@ -2,7 +2,7 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { ChannelCreationForm } from "./ChannelCreationForm";
+import { ChannelCreation } from "./ChannelCreation";
 
 interface ChannelCreationDialogProps {
   isOpen: boolean;
@@ -39,11 +39,11 @@ export const ChannelCreationDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        <ChannelCreationForm 
+        <ChannelCreation 
+          isDialog={true}
           onClose={() => onOpenChange(false)}
           onSubmit={onSubmit}
           isCreating={isCreating}
-          connectedYouTubeChannels={connectedYouTubeChannels}
           playingVoice={playingVoice}
           onVoicePreview={onVoicePreview}
         />

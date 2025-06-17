@@ -18,20 +18,40 @@ import { useEffect } from "react";
 
 const mockTikTokAccounts = ["@motivationhub", "@techtalks", "@foodiefinds", "@lifehacks101"];
 
-export const ChannelCreation = () => {
+interface ChannelCreationProps {
+  isDialog?: boolean;
+  onClose?: () => void;
+  onSubmit?: (data: any) => void;
+  isCreating?: boolean;
+  playingVoice?: string | null;
+  onVoicePreview?: (voiceId: string) => void;
+}
+
+export const ChannelCreation = ({ 
+  isDialog = false, 
+  onClose, 
+  onSubmit, 
+  isCreating = false,
+  playingVoice: externalPlayingVoice,
+  onVoicePreview: externalOnVoicePreview
+}: ChannelCreationProps) => {
   const [channelName, setChannelName] = useState("");
   const [selectedSchedule, setSelectedSchedule] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("");
   const [selectedVideoTypes, setSelectedVideoTypes] = useState<string[]>([]);
   const [topicMode, setTopicMode] = useState("ai-decide");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
-  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [internalPlayingVoice, setInternalPlayingVoice] = useState<string | null>(null);
   const [platform, setPlatform] = useState("");
   const [accountName, setAccountName] = useState("");
   const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
   
   const { createCheckoutSession, isLoading: checkoutLoading } = useStripeCheckout();
   const { fetchConnectedChannels } = useYouTubeAuth();
+
+  // Use external or internal state for voice preview
+  const playingVoice = externalPlayingVoice !== undefined ? externalPlayingVoice : internalPlayingVoice;
+  const onVoicePreview = externalOnVoicePreview || setInternalPlayingVoice;
 
   useEffect(() => {
     loadConnectedChannels();
@@ -90,6 +110,21 @@ export const ChannelCreation = () => {
       accountName
     };
 
+    // If used in dialog mode with custom onSubmit
+    if (isDialog && onSubmit) {
+      const formData = {
+        platform,
+        accountName,
+        voice: selectedVoice,
+        topic: topicMode,
+        schedule: selectedSchedule,
+      };
+      
+      onSubmit({ formData, selectedVideoStyles: selectedVideoTypes });
+      return;
+    }
+
+    // Default behavior: create checkout session
     const success = await createCheckoutSession(selectedSchedule, channelName, channelData);
     if (success) {
       toast({
@@ -99,6 +134,96 @@ export const ChannelCreation = () => {
     }
   };
 
+  const content = (
+    <div className="space-y-6">
+      <ChannelBasicInfo 
+        channelName={channelName}
+        setChannelName={setChannelName}
+      />
+
+      <ChannelPlatformSelector 
+        platform={platform}
+        accountName={accountName}
+        onPlatformChange={setPlatform}
+        onAccountChange={setAccountName}
+        connectedYouTubeChannels={connectedYouTubeChannels}
+        mockTikTokAccounts={mockTikTokAccounts}
+      />
+
+      <VideoStyleSelector 
+        selectedVideoTypes={selectedVideoTypes}
+        onVideoTypeToggle={handleVideoTypeToggle}
+      />
+
+      <ScheduleSelector 
+        selectedSchedule={selectedSchedule}
+        onScheduleSelect={setSelectedSchedule}
+      />
+
+      <VoiceSelectorWithPreview 
+        selectedVoice={selectedVoice}
+        onVoiceSelect={setSelectedVoice}
+        playingVoice={playingVoice}
+        onVoicePreview={onVoicePreview}
+      />
+
+      <TopicSelection 
+        selectedMode={topicMode}
+        onModeChange={setTopicMode}
+        selectedTopics={selectedTopics}
+        onTopicsChange={setSelectedTopics}
+        selectedVideoTypes={selectedVideoTypes}
+      />
+
+      {!isDialog && (
+        <ChannelSummary 
+          channelName={channelName}
+          selectedSchedule={selectedSchedule}
+          selectedVoice={selectedVoice}
+          selectedVideoTypes={selectedVideoTypes}
+          topicSelection={topicMode}
+          selectedTopics={selectedTopics}
+        />
+      )}
+
+      <div className="flex gap-3">
+        {isDialog && onClose && (
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="flex-1"
+          >
+            Cancel
+          </Button>
+        )}
+        
+        <Button
+          onClick={handleCreateChannel}
+          disabled={!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || !platform || !accountName || (topicMode !== "ai-decide" && selectedTopics.length === 0) || (isDialog ? isCreating : checkoutLoading)}
+          className={`${isDialog ? 'flex-1' : 'w-full'} bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700`}
+        >
+          {(isDialog ? isCreating : checkoutLoading) ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              {isDialog ? "Creating..." : "Creating Checkout..."}
+            </>
+          ) : (
+            <>
+              <CreditCard className="w-4 h-4 mr-2" />
+              {isDialog ? "Create Channel" : "Create Channel & Subscribe"}
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+
+  // If used as dialog, return just the content
+  if (isDialog) {
+    return content;
+  }
+
+  // Default full-page layout
   return (
     <ScrollArea className="max-h-[90vh]">
       <Card className="bg-black/40 border-white/10 backdrop-blur-sm max-w-4xl mx-auto">
@@ -111,72 +236,8 @@ export const ChannelCreation = () => {
             Set up your automated content channel with AI narration and variety
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <ChannelBasicInfo 
-            channelName={channelName}
-            setChannelName={setChannelName}
-          />
-
-          <ChannelPlatformSelector 
-            platform={platform}
-            accountName={accountName}
-            onPlatformChange={setPlatform}
-            onAccountChange={setAccountName}
-            connectedYouTubeChannels={connectedYouTubeChannels}
-            mockTikTokAccounts={mockTikTokAccounts}
-          />
-
-          <VideoStyleSelector 
-            selectedVideoTypes={selectedVideoTypes}
-            onVideoTypeToggle={handleVideoTypeToggle}
-          />
-
-          <ScheduleSelector 
-            selectedSchedule={selectedSchedule}
-            onScheduleSelect={setSelectedSchedule}
-          />
-
-          <VoiceSelectorWithPreview 
-            selectedVoice={selectedVoice}
-            onVoiceSelect={setSelectedVoice}
-            playingVoice={playingVoice}
-            onVoicePreview={setPlayingVoice}
-          />
-
-          <TopicSelection 
-            selectedMode={topicMode}
-            onModeChange={setTopicMode}
-            selectedTopics={selectedTopics}
-            onTopicsChange={setSelectedTopics}
-            selectedVideoTypes={selectedVideoTypes}
-          />
-
-          <ChannelSummary 
-            channelName={channelName}
-            selectedSchedule={selectedSchedule}
-            selectedVoice={selectedVoice}
-            selectedVideoTypes={selectedVideoTypes}
-            topicSelection={topicMode}
-            selectedTopics={selectedTopics}
-          />
-
-          <Button
-            onClick={handleCreateChannel}
-            disabled={!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || !platform || !accountName || (topicMode !== "ai-decide" && selectedTopics.length === 0) || checkoutLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-          >
-            {checkoutLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Creating Checkout...
-              </>
-            ) : (
-              <>
-                <CreditCard className="w-4 h-4 mr-2" />
-                Create Channel & Subscribe
-              </>
-            )}
-          </Button>
+        <CardContent>
+          {content}
         </CardContent>
       </Card>
     </ScrollArea>
