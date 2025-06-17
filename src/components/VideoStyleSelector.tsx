@@ -19,6 +19,8 @@ const videoStyleOptions = [
 ];
 
 export const VideoStyleSelector = ({ selectedVideoTypes, onVideoTypeToggle }: VideoStyleSelectorProps) => {
+  console.log("VideoStyleSelector - selectedVideoTypes:", selectedVideoTypes);
+
   return (
     <div className="space-y-4">
       <div>
