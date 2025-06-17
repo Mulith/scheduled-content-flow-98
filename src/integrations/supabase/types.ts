@@ -14,6 +14,7 @@ export type Database = {
           account_name: string
           created_at: string
           id: string
+          is_active: boolean
           name: string
           platform: string
           schedule: string
@@ -31,6 +32,7 @@ export type Database = {
           account_name: string
           created_at?: string
           id?: string
+          is_active?: boolean
           name: string
           platform: string
           schedule: string
@@ -48,6 +50,7 @@ export type Database = {
           account_name?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           name?: string
           platform?: string
           schedule?: string
@@ -62,6 +65,85 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      content_items: {
+        Row: {
+          channel_id: string
+          created_at: string
+          id: string
+          script: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          id?: string
+          script: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          id?: string
+          script?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_items_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "content_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_scenes: {
+        Row: {
+          content_item_id: string
+          created_at: string
+          end_time_seconds: number
+          id: string
+          narration_text: string
+          scene_number: number
+          start_time_seconds: number
+          visual_description: string
+        }
+        Insert: {
+          content_item_id: string
+          created_at?: string
+          end_time_seconds: number
+          id?: string
+          narration_text: string
+          scene_number: number
+          start_time_seconds: number
+          visual_description: string
+        }
+        Update: {
+          content_item_id?: string
+          created_at?: string
+          end_time_seconds?: number
+          id?: string
+          narration_text?: string
+          scene_number?: number
+          start_time_seconds?: number
+          visual_description?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_scenes_content_item_id_fkey"
+            columns: ["content_item_id"]
+            isOneToOne: false
+            referencedRelation: "content_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

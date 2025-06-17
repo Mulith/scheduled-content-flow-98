@@ -38,6 +38,7 @@ interface ContentChannel {
   status: "active" | "paused" | "setup";
   lastGenerated?: string;
   totalVideos: number;
+  isActive: boolean;
 }
 
 // Updated video style themes
@@ -139,7 +140,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
       // Transform database channels to UI format
       const transformedChannels: ContentChannel[] = (dbChannels || []).map(dbChannel => {
-        // Find the voice from the voices hook data
+        // Find the voice from the voices data
         const voiceData = voices.find(v => v.id === dbChannel.selected_voice);
         
         return {
@@ -165,6 +166,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
           status: dbChannel.subscription_status as "active" | "paused" | "setup",
           lastGenerated: "Not yet generated",
           totalVideos: 0,
+          isActive: dbChannel.is_active || false,
         };
       });
       
@@ -381,6 +383,11 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                     <Badge className={getStatusColor(channel.status)}>
                       {channel.status}
                     </Badge>
+                    {channel.isActive && (
+                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                        Live
+                      </Badge>
+                    )}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="sm" className="text-gray-400 hover:text-white">

@@ -180,7 +180,8 @@ const Index = () => {
       </button>
     </div>;
 
-  return <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
       <header className="border-b border-white/10 bg-black/20 backdrop-blur-sm">
         <div className="container mx-auto px-4 md:px-6 py-4">
@@ -334,6 +335,8 @@ const Index = () => {
 
         {activeTab === "account" && <AccountManagement />}
       </main>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;
