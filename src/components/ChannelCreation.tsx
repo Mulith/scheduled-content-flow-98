@@ -12,6 +12,11 @@ import { ScheduleSelector } from "./ScheduleSelector";
 import { VoiceSelectorWithPreview } from "./VoiceSelectorWithPreview";
 import { TopicSelection } from "./TopicSelection";
 import { ChannelSummary } from "./ChannelSummary";
+import { ChannelPlatformSelector } from "./ChannelPlatformSelector";
+import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
+import { useEffect } from "react";
+
+const mockTikTokAccounts = ["@motivationhub", "@techtalks", "@foodiefinds", "@lifehacks101"];
 
 export const ChannelCreation = () => {
   const [channelName, setChannelName] = useState("");
@@ -23,8 +28,19 @@ export const ChannelCreation = () => {
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [platform, setPlatform] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
   
   const { createCheckoutSession, isLoading: checkoutLoading } = useStripeCheckout();
+  const { fetchConnectedChannels } = useYouTubeAuth();
+
+  useEffect(() => {
+    loadConnectedChannels();
+  }, []);
+
+  const loadConnectedChannels = async () => {
+    const youtubeChannels = await fetchConnectedChannels();
+    setConnectedYouTubeChannels(youtubeChannels);
+  };
 
   const handleVideoTypeToggle = (videoTypeId: string) => {
     console.log("ChannelCreation - handleVideoTypeToggle called with:", videoTypeId);
@@ -56,10 +72,10 @@ export const ChannelCreation = () => {
       accountName
     });
     
-    if (!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || needsTopics) {
+    if (!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || !platform || !accountName || needsTopics) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all fields and select at least one video type" + (needsTopics ? " and topic" : ""),
+        description: "Please fill in all fields including platform and account selection" + (needsTopics ? " and topics" : ""),
         variant: "destructive",
       });
       return;
@@ -101,6 +117,15 @@ export const ChannelCreation = () => {
             setChannelName={setChannelName}
           />
 
+          <ChannelPlatformSelector 
+            platform={platform}
+            accountName={accountName}
+            onPlatformChange={setPlatform}
+            onAccountChange={setAccountName}
+            connectedYouTubeChannels={connectedYouTubeChannels}
+            mockTikTokAccounts={mockTikTokAccounts}
+          />
+
           <VideoStyleSelector 
             selectedVideoTypes={selectedVideoTypes}
             onVideoTypeToggle={handleVideoTypeToggle}
@@ -137,7 +162,7 @@ export const ChannelCreation = () => {
 
           <Button
             onClick={handleCreateChannel}
-            disabled={!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || (topicMode !== "ai-decide" && selectedTopics.length === 0) || checkoutLoading}
+            disabled={!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || !platform || !accountName || (topicMode !== "ai-decide" && selectedTopics.length === 0) || checkoutLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >
             {checkoutLoading ? (
