@@ -28,8 +28,6 @@ export const VoiceSelectorWithPreview = ({
   const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
 
   const handleVoicePreview = async (voiceId: string) => {
-    console.log(`Attempting to preview voice: ${voiceId}`);
-    
     // Stop any currently playing audio
     if (audioRef.current) {
       audioRef.current.pause();
@@ -51,62 +49,70 @@ export const VoiceSelectorWithPreview = ({
 
     try {
       setLoadingPreview(voiceId);
-      console.log(`Generating voice preview for ${voiceData.name} (${voiceId})`);
       
-      // Use our text-to-speech function to generate a preview
+      console.log(`Starting voice preview for ${voiceData.name} (${voiceId})`);
+      
+      // Call ElevenLabs TTS API through our edge function
       const { data, error } = await supabase.functions.invoke('text-to-speech', {
         body: {
           text: voiceData.preview,
-          voice_id: voiceId,
-          model_id: "eleven_turbo_v2_5"
+          voice_id: voiceId
         }
       });
 
       if (error) {
+        console.error("Supabase function error:", error);
         throw error;
       }
 
-      if (data?.audio_url) {
-        console.log(`Playing generated audio for ${voiceData.name}`);
-        
-        // Create audio element
-        const audio = new Audio();
-        audioRef.current = audio;
-
-        audio.onplay = () => {
-          console.log("Audio started playing");
-          onVoicePreview(voiceId);
-        };
-
-        audio.onended = () => {
-          console.log("Audio finished playing");
-          onVoicePreview("");
-        };
-
-        audio.onerror = (e) => {
-          console.error("Audio playback error:", e);
-          onVoicePreview("");
-          toast({
-            title: "Voice Preview Error",
-            description: `Could not play voice preview for ${voiceData.name}. Please try again.`,
-            variant: "destructive",
-          });
-        };
-
-        audio.src = data.audio_url;
-        await audio.play();
-        
-      } else {
-        throw new Error('No audio URL received');
+      if (!data?.audioContent) {
+        throw new Error("No audio content received from API");
       }
+
+      // Create audio from base64 data
+      const audioBlob = new Blob(
+        [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
+        { type: 'audio/mpeg' }
+      );
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onplay = () => {
+        onVoicePreview(voiceId);
+      };
+
+      audio.onended = () => {
+        onVoicePreview("");
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = (e) => {
+        console.error("Audio playback error:", e);
+        onVoicePreview("");
+        URL.revokeObjectURL(audioUrl);
+        toast({
+          title: "Audio Playback Error",
+          description: "Failed to play the audio preview",
+          variant: "destructive",
+        });
+      };
+
+      await audio.play();
+      
+      // Use the voice data from our centralized source to ensure consistency
+      toast({
+        title: "Voice Preview",
+        description: `Playing ${voiceData.name} (${voiceData.accent} accent) voice sample...`,
+      });
 
     } catch (error) {
       console.error('Voice preview failed:', error);
-      onVoicePreview("");
       toast({
-        title: "Voice Preview Unavailable",
-        description: `Voice preview for ${voiceData.name} is temporarily unavailable. You can still select this voice for your content.`,
-        variant: "default",
+        title: "Voice Preview Error",
+        description: "Unable to play voice preview. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setLoadingPreview(null);
