@@ -9,6 +9,7 @@ interface Voice {
   type: "free" | "premium";
   description: string;
   accent: string;
+  gender?: string;
   preview: string;
 }
 
@@ -38,7 +39,7 @@ export const useVoices = () => {
       setError(errorMessage);
       console.error('Error fetching voices:', err);
       
-      // Fallback to original mock data if API fails
+      // Fallback to 6 curated voices if API fails
       setVoices([
         {
           id: "aria",
@@ -46,23 +47,53 @@ export const useVoices = () => {
           type: "free",
           description: "Warm, friendly female voice perfect for lifestyle content",
           accent: "American",
+          gender: "female",
           preview: "Hello! I'm Aria, and I'll be narrating your amazing content today.",
         },
         {
-          id: "marcus",
-          name: "Marcus",
+          id: "sarah",
+          name: "Sarah",
           type: "free",
-          description: "Professional male voice ideal for business and productivity",
-          accent: "American",
-          preview: "Welcome to another episode. I'm Marcus, your guide to success.",
+          description: "Professional female voice ideal for educational content",
+          accent: "American", 
+          gender: "female",
+          preview: "Welcome to another episode. I'm Sarah, your guide to knowledge.",
         },
         {
-          id: "sofia",
-          name: "Sofia",
+          id: "charlotte",
+          name: "Charlotte",
           type: "free",
           description: "Energetic female voice great for motivational content",
+          accent: "British",
+          gender: "female", 
+          preview: "Get ready to transform your life! This is Charlotte with your daily motivation.",
+        },
+        {
+          id: "roger",
+          name: "Roger",
+          type: "free",
+          description: "Deep, authoritative male voice perfect for business content",
           accent: "American",
-          preview: "Get ready to transform your life! This is Sofia with your daily motivation.",
+          gender: "male",
+          preview: "Good day, I'm Roger. Let's dive into today's business insights.",
+        },
+        {
+          id: "liam",
+          name: "Liam",
+          type: "free", 
+          description: "Friendly male voice ideal for tutorials and how-to content",
+          accent: "American",
+          gender: "male",
+          preview: "Hey there! I'm Liam, and I'll walk you through this step by step.",
+        },
+        {
+          id: "will",
+          name: "Will",
+          type: "free",
+          description: "Engaging male voice great for storytelling and narratives", 
+          accent: "British",
+          gender: "male",
+          preview: "Welcome, I'm Will. Let me tell you an incredible story.",
         },
       ]);
       
