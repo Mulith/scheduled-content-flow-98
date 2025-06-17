@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, Edit, Download, Clock, Eye, Wand2, Video } from "lucide-react";
 import { ContentStatusProgress } from "@/components/ContentStatusProgress";
+import { useVideoGeneration } from "@/hooks/useVideoGeneration";
 
 interface ContentScene {
   scene_number: number;
@@ -44,8 +44,21 @@ interface ScriptPreviewProps {
   contentItem: ContentItem;
 }
 
+// Utility function to format duration
+const formatDuration = (duration?: number) => {
+  if (!duration) return "Unknown";
+  const minutes = Math.floor(duration / 60);
+  const seconds = duration % 60;
+  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+};
+
 export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
   const [selectedScene, setSelectedScene] = useState(1);
+  const { generateVideos, isGenerating } = useVideoGeneration();
+
+  const handleGenerateVideos = () => {
+    generateVideos.mutate(contentItem.id);
+  };
 
   // Use actual scenes from database if available, otherwise fall back to parsing script
   const getScenes = () => {
@@ -132,9 +145,13 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
                 <Download className="w-4 h-4 mr-2" />
                 Export
               </Button>
-              <Button className="bg-green-600 hover:bg-green-700">
+              <Button 
+                className="bg-green-600 hover:bg-green-700" 
+                onClick={handleGenerateVideos}
+                disabled={isGenerating}
+              >
                 <Play className="w-4 h-4 mr-2" />
-                Generate Video
+                {isGenerating ? "Generating..." : "Generate Videos"}
               </Button>
             </div>
           </div>
