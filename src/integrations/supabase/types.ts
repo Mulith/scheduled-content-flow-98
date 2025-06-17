@@ -66,32 +66,88 @@ export type Database = {
         }
         Relationships: []
       }
+      content_generation_queue: {
+        Row: {
+          channel_id: string
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          items_to_generate: number
+          priority: number
+          scheduled_for: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          items_to_generate?: number
+          priority?: number
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          items_to_generate?: number
+          priority?: number
+          scheduled_for?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_generation_queue_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "content_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_items: {
         Row: {
           channel_id: string
           created_at: string
+          duration_seconds: number | null
           id: string
           script: string
           status: string
           title: string
+          topic_keywords: string[] | null
           updated_at: string
         }
         Insert: {
           channel_id: string
           created_at?: string
+          duration_seconds?: number | null
           id?: string
           script: string
           status?: string
           title: string
+          topic_keywords?: string[] | null
           updated_at?: string
         }
         Update: {
           channel_id?: string
           created_at?: string
+          duration_seconds?: number | null
           id?: string
           script?: string
           status?: string
           title?: string
+          topic_keywords?: string[] | null
           updated_at?: string
         }
         Relationships: [
@@ -99,6 +155,44 @@ export type Database = {
             foreignKeyName: "content_items_channel_id_fkey"
             columns: ["channel_id"]
             isOneToOne: false
+            referencedRelation: "content_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_monitoring_queue: {
+        Row: {
+          channel_id: string
+          created_at: string
+          id: string
+          last_checked_at: string
+          next_check_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          id?: string
+          last_checked_at?: string
+          next_check_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          id?: string
+          last_checked_at?: string
+          next_check_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_monitoring_queue_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: true
             referencedRelation: "content_channels"
             referencedColumns: ["id"]
           },
@@ -228,7 +322,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_content_requirements: {
+        Args: { schedule_type: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

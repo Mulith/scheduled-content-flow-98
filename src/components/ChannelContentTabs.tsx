@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -77,7 +76,7 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
       }
 
       // Update the local channel data
-      const updatedChannel = { ...channel, isActive };
+      const updatedChannel = { ...channel, isActive, status: isActive ? 'active' : 'paused' };
       onChannelUpdate([updatedChannel]);
 
       toast({
@@ -96,13 +95,20 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active": return "bg-green-500/20 text-green-400 border-green-500/30";
-      case "paused": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-      case "setup": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
+  const getStatusColor = (status: string, isActive?: boolean) => {
+    // Use isActive field for accurate status, fallback to status field
+    const actuallyActive = isActive !== undefined ? isActive : status === "active";
+    
+    if (actuallyActive) {
+      return "bg-green-500/20 text-green-400 border-green-500/30";
+    } else {
+      return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
     }
+  };
+
+  const getStatusText = (status: string, isActive?: boolean) => {
+    const actuallyActive = isActive !== undefined ? isActive : status === "active";
+    return actuallyActive ? "active" : "paused";
   };
 
   // Get the correct voice name from the voices data
@@ -132,8 +138,8 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
             <h2 className="text-2xl md:text-3xl font-bold text-white">{channel.name}</h2>
             <div className="flex items-center space-x-3 mt-1">
               <p className="text-gray-400 text-sm md:text-base">{channel.socialAccount.accountName}</p>
-              <Badge className={getStatusColor(channel.status)}>
-                {channel.status}
+              <Badge className={getStatusColor(channel.status, channel.isActive)}>
+                {getStatusText(channel.status, channel.isActive)}
               </Badge>
             </div>
           </div>
@@ -181,7 +187,7 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4 md:space-y-6">
-          {/* Channel Configuration - Moved here from above tabs */}
+          {/* Channel Configuration */}
           <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="text-white text-lg md:text-xl">Channel Configuration</CardTitle>

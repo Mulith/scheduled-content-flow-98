@@ -17,6 +17,7 @@ import { AccountManagement } from "@/components/AccountManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { SkadooshLogo } from "@/components/SkadooshLogo";
+import { ContentQueueStatus } from "@/components/ContentQueueStatus";
 
 interface ContentChannel {
   id: string;
@@ -276,6 +277,9 @@ const Index = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Content Queue Status */}
+            <ContentQueueStatus />
 
             {/* Recent Activity */}
             <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
