@@ -11,6 +11,7 @@ interface Voice {
   accent: string;
   gender?: string;
   preview: string;
+  sampleUrl: string; // Add sampleUrl to interface
 }
 
 export const useVoices = () => {

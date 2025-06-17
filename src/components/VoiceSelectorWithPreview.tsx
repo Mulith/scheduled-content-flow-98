@@ -8,7 +8,6 @@ import { Loader2, Play, Pause } from "lucide-react";
 import { useVoices } from "@/hooks/useVoices";
 import { toast } from "@/hooks/use-toast";
 import { useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface VoiceSelectorWithPreviewProps {
   selectedVoice: string;
@@ -52,31 +51,8 @@ export const VoiceSelectorWithPreview = ({
       
       console.log(`Starting voice preview for ${voiceData.name} (${voiceId})`);
       
-      // Call ElevenLabs TTS API through our edge function
-      const { data, error } = await supabase.functions.invoke('text-to-speech', {
-        body: {
-          text: voiceData.preview,
-          voice_id: voiceId
-        }
-      });
-
-      if (error) {
-        console.error("Supabase function error:", error);
-        throw error;
-      }
-
-      if (!data?.audioContent) {
-        throw new Error("No audio content received from API");
-      }
-
-      // Create audio from base64 data
-      const audioBlob = new Blob(
-        [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
-        { type: 'audio/mpeg' }
-      );
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      const audio = new Audio(audioUrl);
+      // Use pre-recorded sample instead of API call
+      const audio = new Audio(voiceData.sampleUrl);
       audioRef.current = audio;
 
       audio.onplay = () => {
@@ -85,13 +61,11 @@ export const VoiceSelectorWithPreview = ({
 
       audio.onended = () => {
         onVoicePreview("");
-        URL.revokeObjectURL(audioUrl);
       };
 
       audio.onerror = (e) => {
         console.error("Audio playback error:", e);
         onVoicePreview("");
-        URL.revokeObjectURL(audioUrl);
         toast({
           title: "Audio Playback Error",
           description: "Failed to play the audio preview",
@@ -101,7 +75,6 @@ export const VoiceSelectorWithPreview = ({
 
       await audio.play();
       
-      // Use the voice data from our centralized source to ensure consistency
       toast({
         title: "Voice Preview",
         description: `Playing ${voiceData.name} (${voiceData.accent} accent) voice sample...`,
