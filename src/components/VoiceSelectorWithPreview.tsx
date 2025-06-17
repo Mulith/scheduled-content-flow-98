@@ -48,6 +48,16 @@ export const VoiceSelectorWithPreview = ({
       return;
     }
 
+    // If no sample URL is available, show a message
+    if (!voiceData.sampleUrl) {
+      toast({
+        title: "Voice Preview Not Available",
+        description: `Preview for ${voiceData.name} is not available at the moment. You can still select this voice for your content.`,
+        variant: "default",
+      });
+      return;
+    }
+
     try {
       setLoadingPreview(voiceId);
       
@@ -82,35 +92,15 @@ export const VoiceSelectorWithPreview = ({
         console.error("Failed URL:", voiceData.sampleUrl);
         onVoicePreview("");
         
-        // Try to provide more specific error information
-        const audioError = audio.error;
-        let errorMessage = "Failed to play the audio preview";
-        
-        if (audioError) {
-          switch (audioError.code) {
-            case MediaError.MEDIA_ERR_ABORTED:
-              errorMessage = "Audio playback was aborted";
-              break;
-            case MediaError.MEDIA_ERR_NETWORK:
-              errorMessage = "Network error while loading audio";
-              break;
-            case MediaError.MEDIA_ERR_DECODE:
-              errorMessage = "Audio decoding error";
-              break;
-            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-              errorMessage = "Audio format not supported or file not found";
-              break;
-          }
-        }
-        
         toast({
-          title: "Audio Preview Error",
-          description: errorMessage,
-          variant: "destructive",
+          title: "Voice Preview Unavailable",
+          description: `Sorry, the voice preview for ${voiceData.name} is currently unavailable. You can still select this voice for your content.`,
+          variant: "default",
         });
       };
 
-      // Set the audio source
+      // Set the audio source with CORS handling
+      audio.crossOrigin = "anonymous";
       audio.src = voiceData.sampleUrl;
       
       // Load and play the audio
@@ -126,9 +116,9 @@ export const VoiceSelectorWithPreview = ({
       console.error('Voice preview failed:', error);
       onVoicePreview("");
       toast({
-        title: "Voice Preview Error",
-        description: `Unable to play voice preview for ${voiceData.name}. The sample may not be available.`,
-        variant: "destructive",
+        title: "Voice Preview Unavailable",
+        description: `Voice preview for ${voiceData.name} is currently unavailable. You can still select this voice for your content.`,
+        variant: "default",
       });
     } finally {
       setLoadingPreview(null);
