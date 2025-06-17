@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Clock, PlayCircle, Edit, ChevronLeft, Eye } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { ScriptPreview } from "@/components/ScriptPreview";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const scheduleOptions = [
   { value: "twice-daily", label: "2x Daily", description: "Morning and evening posts", frequency: "14 posts/week" },
@@ -14,55 +17,66 @@ const scheduleOptions = [
   { value: "monthly", label: "Monthly", description: "8 posts per month", frequency: "2 posts/week" },
 ];
 
-const mockContentIdeas = [
-  {
-    id: 1,
-    title: "5 Morning Habits That Will Transform Your Day",
-    theme: "Productivity",
-    scheduledFor: "Tomorrow 8:00 AM",
-    status: "script-ready",
-    engagement: "High"
-  },
-  {
-    id: 2,
-    title: "Why 99% of People Give Up Too Early",
-    theme: "Motivation",
-    scheduledFor: "Tomorrow 6:00 PM",
-    status: "generating",
-    engagement: "Very High"
-  },
-  {
-    id: 3,
-    title: "The One Habit That Reduces Anxiety Instantly",
-    theme: "Wellness",
-    scheduledFor: "Dec 18, 8:00 AM",
-    status: "scheduled",
-    engagement: "Medium"
-  },
-  {
-    id: 4,
-    title: "This Simple Trick Will Change How You Think",
-    theme: "Self-Improvement",
-    scheduledFor: "Dec 18, 6:00 PM",
-    status: "scheduled",
-    engagement: "High"
-  },
-  {
-    id: 5,
-    title: "What Rich People Know That You Don't",
-    theme: "Success",
-    scheduledFor: "Dec 19, 8:00 AM",
-    status: "scheduled",
-    engagement: "Very High"
-  },
-];
-
 export const ContentCalendar = () => {
   const [selectedSchedule, setSelectedSchedule] = useState("");
-  const [generatedIdeas, setGeneratedIdeas] = useState(mockContentIdeas);
-  const [selectedIdeaId, setSelectedIdeaId] = useState<number | null>(null);
+  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
 
-  const selectedIdea = selectedIdeaId ? generatedIdeas.find(idea => idea.id === selectedIdeaId) : null;
+  // Fetch real content items from the database
+  const { data: contentItems = [], isLoading, refetch } = useQuery({
+    queryKey: ['content-items'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('content_items')
+        .select(`
+          *,
+          content_channels (
+            name,
+            schedule,
+            platform
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching content items:', error);
+        throw error;
+      }
+
+      // Transform data to match the expected format
+      return data.map(item => ({
+        id: item.id,
+        title: item.title,
+        theme: item.content_channels?.name || 'Unknown Channel',
+        scheduledFor: getScheduledDate(item.created_at, item.content_channels?.schedule || 'daily'),
+        status: item.status,
+        engagement: getEngagementLevel(item.topic_keywords?.length || 0),
+        channel: item.content_channels?.name || 'Unknown Channel',
+        script: item.script,
+        duration: item.duration_seconds
+      }));
+    },
+  });
+
+  const getScheduledDate = (createdAt: string, schedule: string) => {
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays < 7) return `In ${diffDays} days`;
+    
+    return created.toLocaleDateString();
+  };
+
+  const getEngagementLevel = (topicCount: number) => {
+    if (topicCount >= 5) return "Very High";
+    if (topicCount >= 3) return "High";
+    if (topicCount >= 1) return "Medium";
+    return "Low";
+  };
+
+  const selectedIdea = selectedIdeaId ? contentItems.find(idea => idea.id === selectedIdeaId) : null;
 
   const handleScheduleSelect = (value: string) => {
     setSelectedSchedule(value);
@@ -72,33 +86,43 @@ export const ContentCalendar = () => {
     });
   };
 
-  const generateMoreIdeas = () => {
-    const newIdeas = [
-      {
-        id: generatedIdeas.length + 1,
-        title: "The Secret to Never Procrastinating Again",
-        theme: "Productivity",
-        scheduledFor: "Dec 20, 8:00 AM",
-        status: "scheduled",
-        engagement: "High"
-      },
-      {
-        id: generatedIdeas.length + 2,
-        title: "Why Your Brain Sabotages Your Success",
-        theme: "Psychology",
-        scheduledFor: "Dec 20, 6:00 PM",
-        status: "scheduled",
-        engagement: "Very High"
-      },
-    ];
-    setGeneratedIdeas([...generatedIdeas, ...newIdeas]);
-    toast({
-      title: "New Ideas Generated",
-      description: "Added 2 new content ideas to your calendar!",
-    });
+  const generateMoreIdeas = async () => {
+    try {
+      // Trigger content generation via the edge function
+      const response = await fetch('/api/content-generator', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          trigger: 'manual'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to trigger content generation');
+      }
+
+      toast({
+        title: "Content Generation Started",
+        description: "New content ideas are being generated in the background!",
+      });
+
+      // Refetch content items after a short delay
+      setTimeout(() => {
+        refetch();
+      }, 2000);
+    } catch (error) {
+      console.error('Error generating content:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate new content ideas",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleIdeaClick = (ideaId: number) => {
+  const handleIdeaClick = (ideaId: string) => {
     setSelectedIdeaId(ideaId);
   };
 
@@ -108,9 +132,10 @@ export const ContentCalendar = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "script-ready": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
+      case "draft": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
       case "generating": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-      case "scheduled": return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "published": return "bg-green-500/20 text-green-400 border-green-500/30";
+      case "scheduled": return "bg-purple-500/20 text-purple-400 border-purple-500/30";
       default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
   };
@@ -121,6 +146,16 @@ export const ContentCalendar = () => {
       case "High": return "text-orange-400";
       case "Medium": return "text-yellow-400";
       default: return "text-gray-400";
+    }
+  };
+
+  const getStatusDisplayText = (status: string) => {
+    switch (status) {
+      case "draft": return "Script Ready";
+      case "generating": return "Generating...";
+      case "published": return "Published";
+      case "scheduled": return "Scheduled";
+      default: return status;
     }
   };
 
@@ -214,70 +249,93 @@ export const ContentCalendar = () => {
               onClick={generateMoreIdeas}
               variant="outline" 
               className="border-white/20 text-white hover:bg-white/10"
+              disabled={isLoading}
             >
-              Generate More Ideas
+              {isLoading ? "Loading..." : "Generate More Ideas"}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {generatedIdeas.map((idea) => (
-              <div 
-                key={idea.id} 
-                className="p-4 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors"
-                onClick={() => handleIdeaClick(idea.id)}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-gray-400">Loading content ideas...</div>
+            </div>
+          ) : contentItems.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-400 mb-4">No content ideas generated yet</p>
+              <Button 
+                onClick={generateMoreIdeas}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="text-white font-medium mb-2 hover:text-blue-400 transition-colors">{idea.title}</h4>
-                    <div className="flex items-center space-x-4 text-sm">
-                      <div className="flex items-center">
-                        <Badge variant="outline" className="border-purple-500/30 text-purple-400">
-                          {idea.theme}
-                        </Badge>
+                Generate Your First Ideas
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {contentItems.map((idea) => (
+                <div 
+                  key={idea.id} 
+                  className="p-4 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors"
+                  onClick={() => handleIdeaClick(idea.id)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="text-white font-medium mb-2 hover:text-blue-400 transition-colors">{idea.title}</h4>
+                      <div className="flex items-center space-x-4 text-sm">
+                        <div className="flex items-center">
+                          <Badge variant="outline" className="border-purple-500/30 text-purple-400">
+                            {idea.theme}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center text-gray-400">
+                          <Clock className="w-4 h-4 mr-1" />
+                          {idea.scheduledFor}
+                        </div>
+                        <div className={`flex items-center ${getEngagementColor(idea.engagement)}`}>
+                          <span className="text-xs font-medium">
+                            {idea.engagement} Engagement
+                          </span>
+                        </div>
+                        {idea.duration && (
+                          <div className="flex items-center text-gray-400">
+                            <span className="text-xs">
+                              {Math.floor(idea.duration / 60)}:{(idea.duration % 60).toString().padStart(2, '0')}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex items-center text-gray-400">
-                        <Clock className="w-4 h-4 mr-1" />
-                        {idea.scheduledFor}
-                      </div>
-                      <div className={`flex items-center ${getEngagementColor(idea.engagement)}`}>
-                        <span className="text-xs font-medium">
-                          {idea.engagement} Engagement
-                        </span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Badge className={getStatusColor(idea.status)}>
+                        {getStatusDisplayText(idea.status)}
+                      </Badge>
+                      <div className="flex items-center space-x-2">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          className="text-gray-400 hover:text-white"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Edit functionality here
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Eye className="w-4 h-4 text-blue-400" />
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge className={getStatusColor(idea.status)}>
-                      {idea.status === "script-ready" ? "Script Ready" : 
-                       idea.status === "generating" ? "Generating..." : "Scheduled"}
-                    </Badge>
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="text-gray-400 hover:text-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Edit functionality here
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Eye className="w-4 h-4 text-blue-400" />
+                  
+                  {idea.status === "draft" && (
+                    <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <p className="text-blue-400 text-sm font-medium">Ready for production!</p>
+                      <p className="text-gray-300 text-sm">Script generated • Storyboard created • Voice selected</p>
                     </div>
-                  </div>
+                  )}
                 </div>
-                
-                {idea.status === "script-ready" && (
-                  <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <p className="text-blue-400 text-sm font-medium">Ready for production!</p>
-                    <p className="text-gray-300 text-sm">Script generated • Storyboard created • Voice selected</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
