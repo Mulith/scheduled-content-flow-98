@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ export const SocialConnections = () => {
   });
   
   const [youtubeChannels, setYoutubeChannels] = useState<any[]>([]);
-  const { isConnecting, isDisconnecting, connectYouTube, disconnectYouTube, handleOAuthCallback, fetchConnectedChannels } = useYouTubeAuth();
+  const { isConnecting, isDisconnecting, connectYouTube, disconnectYouTube, handleOAuthCallback, fetchConnectedChannels, updateChannelEnabled } = useYouTubeAuth();
 
   // Check for OAuth callback
   useEffect(() => {
@@ -55,6 +56,39 @@ export const SocialConnections = () => {
     try {
       await disconnectYouTube();
       await loadYouTubeChannels();
+    } catch (error) {
+      // Error is already handled in the hook
+    }
+  };
+
+  const handleChannelToggle = async (channelId: string, enabled: boolean) => {
+    try {
+      await updateChannelEnabled(channelId, enabled);
+      
+      // Update local state
+      setYoutubeChannels(prev => 
+        prev.map(channel => 
+          channel.channel_id === channelId 
+            ? { ...channel, enabled } 
+            : channel
+        )
+      );
+
+      // Update overall connection state
+      const updatedChannels = youtubeChannels.map(channel => 
+        channel.channel_id === channelId 
+          ? { ...channel, enabled } 
+          : channel
+      );
+      
+      setConnections(prev => ({
+        ...prev,
+        youtube: { 
+          ...prev.youtube,
+          enabled: updatedChannels.some(c => c.enabled) 
+        }
+      }));
+
     } catch (error) {
       // Error is already handled in the hook
     }
@@ -129,7 +163,7 @@ export const SocialConnections = () => {
             {connections.youtube.connected && youtubeChannels.length > 0 ? (
               <div className="space-y-4">
                 {youtubeChannels.map((channel) => (
-                  <div key={channel.id} className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                  <div key={channel.channel_id} className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
                     <div className="flex items-start space-x-3">
                       {channel.thumbnail_url && (
                         <img 
@@ -154,18 +188,17 @@ export const SocialConnections = () => {
                             <span>{formatNumber(channel.video_count)} videos</span>
                           </div>
                         </div>
+                        <div className="flex items-center justify-between mt-3">
+                          <span className="text-white text-sm">Enable auto-posting</span>
+                          <Switch 
+                            checked={channel.enabled || false}
+                            onCheckedChange={(enabled) => handleChannelToggle(channel.channel_id, enabled)}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 ))}
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-white">Enable auto-posting</span>
-                  <Switch 
-                    checked={connections.youtube.enabled}
-                    onCheckedChange={() => handleToggle('youtube')}
-                  />
-                </div>
 
                 <Button 
                   onClick={handleDisconnectYouTube}

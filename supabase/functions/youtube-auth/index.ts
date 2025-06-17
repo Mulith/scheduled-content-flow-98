@@ -27,7 +27,7 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    const { action, code, state } = await req.json()
+    const { action, code, state, channelId, enabled } = await req.json()
 
     if (action === 'getAuthUrl') {
       const clientId = Deno.env.get('YOUTUBE_CLIENT_ID')
@@ -42,13 +42,37 @@ serve(async (req) => {
       authUrl.searchParams.set('client_id', clientId!)
       authUrl.searchParams.set('redirect_uri', redirectUri)
       authUrl.searchParams.set('response_type', 'code')
-      authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload')
+      // Updated scopes to request broader access
+      authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube https://www.googleapis.com/auth/youtube.force-ssl')
       authUrl.searchParams.set('access_type', 'offline')
       authUrl.searchParams.set('prompt', 'consent') // Force consent to get refresh token
       authUrl.searchParams.set('state', user.id)
 
       return new Response(
         JSON.stringify({ authUrl: authUrl.toString() }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (action === 'updateChannelEnabled') {
+      const { error } = await supabaseClient
+        .from('youtube_channels')
+        .update({ enabled: enabled })
+        .eq('user_id', user.id)
+        .eq('channel_id', channelId)
+
+      if (error) {
+        console.error('Database error during channel update:', error)
+        throw new Error('Failed to update channel settings')
+      }
+
+      console.log(`Updated channel ${channelId} enabled status to: ${enabled}`)
+
+      return new Response(
+        JSON.stringify({ 
+          success: true,
+          message: 'Channel settings updated successfully'
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -151,6 +175,24 @@ serve(async (req) => {
         console.log('Managed channels fetch failed (expected for most accounts):', managedError)
       }
 
+      // Approach 3: Try to fetch using channel IDs from subscriptions (broader access)
+      console.log('Attempting to fetch via subscriptions...')
+      try {
+        const subscriptionsResponse = await fetch(
+          'https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50',
+          {
+            headers: {
+              'Authorization': `Bearer ${tokenData.access_token}`,
+            },
+          }
+        )
+        
+        const subscriptionsData = await subscriptionsResponse.json()
+        console.log('Subscriptions response (for debugging):', subscriptionsData)
+      } catch (subscriptionError) {
+        console.log('Subscriptions fetch failed:', subscriptionError)
+      }
+
       if (allChannels.length === 0) {
         throw new Error('No YouTube channels found for this account')
       }
@@ -171,6 +213,7 @@ serve(async (req) => {
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token || null, // Allow null refresh tokens
           token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
+          enabled: false, // Default to disabled
         }
 
         const { error } = await supabaseClient
@@ -189,6 +232,7 @@ serve(async (req) => {
             thumbnail: channel.snippet.thumbnails?.default?.url,
             subscribers: channel.statistics?.subscriberCount || '0',
             videos: channel.statistics?.videoCount || '0',
+            enabled: false,
           })
         }
       }

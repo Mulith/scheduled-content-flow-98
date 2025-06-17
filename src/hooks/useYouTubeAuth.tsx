@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -28,6 +29,31 @@ export const useYouTubeAuth = () => {
         variant: "destructive",
       });
       setIsConnecting(false);
+    }
+  };
+
+  const updateChannelEnabled = async (channelId: string, enabled: boolean) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('youtube-auth', {
+        body: { 
+          action: 'updateChannelEnabled',
+          channelId,
+          enabled 
+        }
+      });
+
+      if (error) throw error;
+
+      return true;
+      
+    } catch (error) {
+      console.error('Channel update error:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update channel settings.",
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
@@ -118,5 +144,6 @@ export const useYouTubeAuth = () => {
     disconnectYouTube,
     handleOAuthCallback,
     fetchConnectedChannels,
+    updateChannelEnabled,
   };
 };
