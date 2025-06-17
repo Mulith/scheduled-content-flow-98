@@ -39,7 +39,7 @@ export const useVoices = () => {
       setError(errorMessage);
       console.error('Error fetching voices:', err);
       
-      // Fallback to all curated voices with real ElevenLabs IDs and correct accents
+      // Fallback to corrected voice data with accurate accents
       setVoices([
         // Female voices
         {
@@ -65,18 +65,18 @@ export const useVoices = () => {
           name: "Matilda",
           type: "free",
           description: "Energetic female voice great for motivational content",
-          accent: "Australian",
+          accent: "American",
           gender: "female",
-          preview: "G'day! I'm Matilda, and I'm absolutely stoked to motivate you today with my energetic Australian accent. Let's get cracking!",
+          preview: "Hey there! I'm Matilda, and I'm absolutely excited to motivate you today with my energetic American accent. Let's get started!",
         },
         {
           id: "aRlmTYIQo6Tlg5SlulGC",
           name: "Emma",
           type: "free",
           description: "Clear, articulate female voice perfect for storytelling",
-          accent: "British",
+          accent: "Australian",
           gender: "female",
-          preview: "Hello there! I'm Emma, and I do love telling stories with my clear, articulate British voice. Let me share something rather wonderful with you.",
+          preview: "G'day! I'm Emma, and I absolutely love telling stories with my clear, articulate Australian voice. Let me share something wonderful with you, mate!",
         },
         {
           id: "ZF6FPAbjXT4488VcRRnw",
@@ -92,9 +92,9 @@ export const useVoices = () => {
           name: "Sophia",
           type: "free",
           description: "Sophisticated female voice great for business content",
-          accent: "American",
+          accent: "British",
           gender: "female",
-          preview: "Hello there! I'm Sophia, your sophisticated narrator with a professional American accent. Let's dive into today's business insights.",
+          preview: "Hello there! I'm Sophia, your sophisticated narrator with a refined British accent. Shall we dive into today's business insights?",
         },
         // Male voices
         {

@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
     
-    // Your curated list of voices with real ElevenLabs IDs and correct accents
+    // Corrected voice data with accurate accents based on actual voice characteristics
     const curatedVoices = [
       // Female voices
       {
@@ -36,22 +36,22 @@ serve(async (req) => {
         preview: "Welcome to this educational session. I'm Sarah, your professional guide with a clear American accent, ready to share knowledge.",
       },
       {
-        id: "XrExE9yKIg1WjnnlVkGX", // Matilda
+        id: "XrExE9yKIg1WjnnlVkGX", // Matilda - CORRECTED to American
         name: "Matilda",
         type: "free",
         description: "Energetic female voice great for motivational content",
-        accent: "Australian",
+        accent: "American",
         gender: "female",
-        preview: "G'day! I'm Matilda, and I'm absolutely stoked to motivate you today with my energetic Australian accent. Let's get cracking!",
+        preview: "Hey there! I'm Matilda, and I'm absolutely excited to motivate you today with my energetic American accent. Let's get started!",
       },
       {
-        id: "aRlmTYIQo6Tlg5SlulGC", // Emma
+        id: "aRlmTYIQo6Tlg5SlulGC", // Emma - CORRECTED to Australian
         name: "Emma",
         type: "free",
         description: "Clear, articulate female voice perfect for storytelling",
-        accent: "British",
+        accent: "Australian",
         gender: "female",
-        preview: "Hello there! I'm Emma, and I do love telling stories with my clear, articulate British voice. Let me share something rather wonderful with you.",
+        preview: "G'day! I'm Emma, and I absolutely love telling stories with my clear, articulate Australian voice. Let me share something wonderful with you, mate!",
       },
       {
         id: "ZF6FPAbjXT4488VcRRnw", // Grace
@@ -63,13 +63,13 @@ serve(async (req) => {
         preview: "Good afternoon! I'm Grace, speaking with an elegant British accent. I'm frightfully delighted to elevate your listening experience today.",
       },
       {
-        id: "WzsP0bfiCpSDfNgLrUuN", // Sophia
+        id: "WzsP0bfiCpSDfNgLrUuN", // Sophia - CORRECTED to British
         name: "Sophia",
         type: "free",
         description: "Sophisticated female voice great for business content",
-        accent: "American",
+        accent: "British",
         gender: "female",
-        preview: "Hello there! I'm Sophia, your sophisticated narrator with a professional American accent. Let's dive into today's business insights.",
+        preview: "Hello there! I'm Sophia, your sophisticated narrator with a refined British accent. Shall we dive into today's business insights?",
       },
       // Male voices
       {
@@ -134,7 +134,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error fetching voices:", error);
     
-    // Fallback voices with the same real ElevenLabs IDs and correct accents
+    // Fallback voices with corrected accents
     const fallbackVoices = [
       {
         id: "FGY2WhTYpPnrIDTdsKH5",
@@ -159,18 +159,18 @@ serve(async (req) => {
         name: "Matilda",
         type: "free",
         description: "Energetic female voice",
-        accent: "Australian",
+        accent: "American",
         gender: "female",
-        preview: "G'day! I'm Matilda with my energetic Australian accent.",
+        preview: "Hey! I'm Matilda with my energetic American accent.",
       },
       {
         id: "aRlmTYIQo6Tlg5SlulGC",
         name: "Emma",
         type: "free",
         description: "Clear, articulate female voice",
-        accent: "British",
+        accent: "Australian",
         gender: "female",
-        preview: "Hello! I'm Emma with my clear British voice.",
+        preview: "G'day! I'm Emma with my clear Australian voice.",
       },
       {
         id: "ZF6FPAbjXT4488VcRRnw",
@@ -186,9 +186,9 @@ serve(async (req) => {
         name: "Sophia",
         type: "free",
         description: "Sophisticated female voice",
-        accent: "American",
+        accent: "British",
         gender: "female",
-        preview: "Hello! I'm Sophia with my sophisticated American accent.",
+        preview: "Hello! I'm Sophia with my sophisticated British accent.",
       },
       {
         id: "IKne3meq5aSn9XLyUdCD",
