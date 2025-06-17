@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, X, Sparkles, RefreshCw } from "lucide-react";
-import { toast } from "@/hooks/use-toast";
+import { Plus, X } from "lucide-react";
 
 interface TopicSelectorProps {
   topicSelection: string;
@@ -19,9 +18,6 @@ interface TopicSelectorProps {
   onAddCustomTopic: () => void;
   onRemoveSelectedTopic: (topic: string) => void;
   selectedVideoTypes: string[];
-  onGenerateAITopics: () => void;
-  isGeneratingTopics: boolean;
-  generatedTopics: string[];
 }
 
 const topicCategories = [
@@ -47,11 +43,7 @@ export const TopicSelector = ({
   customTopic,
   onCustomTopicChange,
   onAddCustomTopic,
-  onRemoveSelectedTopic,
-  selectedVideoTypes,
-  onGenerateAITopics,
-  isGeneratingTopics,
-  generatedTopics
+  onRemoveSelectedTopic
 }: TopicSelectorProps) => {
   return (
     <div className="space-y-4">
@@ -69,13 +61,6 @@ export const TopicSelector = ({
           <RadioGroupItem value="predefined" id="predefined" />
           <Label htmlFor="predefined" className="text-white cursor-pointer">
             Choose from predefined topics
-          </Label>
-        </div>
-        
-        <div className="flex items-center space-x-2">
-          <RadioGroupItem value="ai-generated" id="ai-generated" />
-          <Label htmlFor="ai-generated" className="text-white cursor-pointer">
-            AI-generated topics based on video styles
           </Label>
         </div>
         
@@ -113,54 +98,6 @@ export const TopicSelector = ({
               </Card>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* AI Topic Generation */}
-      {topicSelection === "ai-generated" && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm text-gray-300">AI-generated topic suggestions:</Label>
-            <Button 
-              type="button"
-              onClick={onGenerateAITopics}
-              disabled={selectedVideoTypes.length === 0 || isGeneratingTopics}
-              size="sm"
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              {isGeneratingTopics ? (
-                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <Sparkles className="w-4 h-4 mr-2" />
-              )}
-              Generate Topics
-            </Button>
-          </div>
-          
-          {generatedTopics.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {generatedTopics.map((topic, index) => (
-                <Card
-                  key={index}
-                  className={`cursor-pointer transition-all p-3 ${
-                    selectedTopics.includes(topic)
-                      ? "bg-purple-600/20 border-purple-500"
-                      : "bg-gray-800 border-gray-600 hover:bg-gray-700"
-                  }`}
-                  onClick={() => onTopicToggle(topic)}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-white text-sm">{topic}</span>
-                    <Checkbox 
-                      checked={selectedTopics.includes(topic)}
-                      onChange={() => {}}
-                      className="data-[state=checked]:bg-purple-500"
-                    />
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
