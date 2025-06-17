@@ -75,8 +75,12 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
         return;
       }
 
-      // Update the local channel data
-      const updatedChannel = { ...channel, isActive, status: isActive ? 'active' : 'paused' };
+      // Update the local channel data with proper typing
+      const updatedChannel: ContentChannel = { 
+        ...channel, 
+        isActive, 
+        status: isActive ? 'active' as const : 'paused' as const
+      };
       onChannelUpdate([updatedChannel]);
 
       toast({
