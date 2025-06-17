@@ -12,6 +12,7 @@ import { VideoStyleSelector } from "./VideoStyleSelector";
 import { VoiceSelectorWithPreview } from "./VoiceSelectorWithPreview";
 import { TopicSelection } from "./TopicSelection";
 import { ChannelCreation } from "./ChannelCreation";
+import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 
 interface ContentChannel {
   id: string;
@@ -100,8 +101,10 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [isCreatingChannel, setIsCreatingChannel] = useState(false);
 
   const { fetchConnectedChannels } = useYouTubeAuth();
+  const { createCheckoutSession } = useStripeCheckout();
 
   useEffect(() => {
     loadConnectedChannels();
@@ -146,16 +149,53 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     }
   };
 
-  const handleChannelFormSubmit = (data: {
+  const handleChannelFormSubmit = async (data: {
     formData: any;
     selectedVideoStyles: string[];
   }) => {
-    console.log("Channel creation data:", data);
-    toast({
-      title: "Channel Creation Started",
-      description: "Redirecting to Stripe checkout...",
-    });
-    setIsCreateDialogOpen(false);
+    console.log("ContentChannels - handleChannelFormSubmit called with:", data);
+    
+    try {
+      setIsCreatingChannel(true);
+      
+      const { formData, selectedVideoStyles } = data;
+      const channelName = `${formData.accountName} Channel`; // Generate a channel name
+      
+      const channelData = {
+        selectedVideoTypes: selectedVideoStyles,
+        selectedVoice: formData.voice,
+        topicMode: formData.topic,
+        selectedTopics: [],
+        platform: formData.platform,
+        accountName: formData.accountName
+      };
+
+      console.log("ContentChannels - Creating checkout with:", {
+        schedule: formData.schedule,
+        channelName,
+        channelData
+      });
+
+      // Create the Stripe checkout session
+      const success = await createCheckoutSession(formData.schedule, channelName, channelData);
+      
+      if (success) {
+        setIsCreateDialogOpen(false);
+        toast({
+          title: "Redirecting to Checkout",
+          description: "Opening Stripe checkout...",
+        });
+      }
+    } catch (error) {
+      console.error("Error creating channel:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create checkout session",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingChannel(false);
+    }
   };
 
   const handleDeleteChannel = (channelId: string) => {
@@ -224,7 +264,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
               isDialog={true}
               onClose={() => setIsCreateDialogOpen(false)}
               onSubmit={handleChannelFormSubmit}
-              isCreating={false}
+              isCreating={isCreatingChannel}
               playingVoice={playingVoice}
               onVoicePreview={setPlayingVoice}
             />
