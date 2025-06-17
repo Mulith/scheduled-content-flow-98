@@ -1,56 +1,17 @@
+
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Edit, Download, Clock, Eye, Wand2, Video } from "lucide-react";
-import { ContentStatusProgress } from "@/components/ContentStatusProgress";
 import { useVideoGeneration } from "@/hooks/useVideoGeneration";
-
-interface ContentScene {
-  scene_number: number;
-  start_time_seconds: number;
-  end_time_seconds: number;
-  visual_description: string;
-  narration_text: string;
-  content_scene_videos?: {
-    id: string;
-    video_url: string;
-    video_status: string;
-    error_message?: string;
-  }[];
-}
-
-interface ContentItem {
-  id: string;
-  title: string;
-  theme: string;
-  scheduledFor: string;
-  status: string;
-  engagement: string;
-  channel: string;
-  script: string;
-  duration?: number;
-  scenes?: ContentScene[];
-  // New status fields
-  generation_stage?: string;
-  script_status?: string;
-  video_status?: string;
-  music_status?: string;
-  post_status?: string;
-}
+import { ContentItem } from "./script-preview/types";
+import { getScenes } from "./script-preview/utils";
+import { ScriptHeader } from "./script-preview/ScriptHeader";
+import { ScriptTimeline } from "./script-preview/ScriptTimeline";
+import { Storyboard } from "./script-preview/Storyboard";
+import { ProductionPipeline } from "./script-preview/ProductionPipeline";
 
 interface ScriptPreviewProps {
   contentItem: ContentItem;
 }
-
-// Utility function to format duration
-const formatDuration = (duration?: number) => {
-  if (!duration) return "Unknown";
-  const minutes = Math.floor(duration / 60);
-  const seconds = duration % 60;
-  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-};
 
 export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
   const [selectedScene, setSelectedScene] = useState(1);
@@ -60,39 +21,7 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
     generateVideos.mutate(contentItem.id);
   };
 
-  // Use actual scenes from database if available, otherwise fall back to parsing script
-  const getScenes = () => {
-    if (contentItem.scenes && contentItem.scenes.length > 0) {
-      // Use actual scene data from database
-      return contentItem.scenes.map(scene => ({
-        id: scene.scene_number,
-        timestamp: `${Math.floor(scene.start_time_seconds / 60)}:${String(scene.start_time_seconds % 60).padStart(2, '0')}-${Math.floor(scene.end_time_seconds / 60)}:${String(scene.end_time_seconds % 60).padStart(2, '0')}`,
-        text: scene.narration_text,
-        visual: scene.visual_description,
-        voiceNote: getVoiceDirection(scene.scene_number, contentItem.scenes!.length)
-      }));
-    } else {
-      // Fallback: parse script to create scenes (for backward compatibility)
-      const sentences = contentItem.script.split(/[.!?]+/).filter(s => s.trim().length > 0);
-      const sceneDuration = (contentItem.duration || 60) / Math.max(sentences.length, 1);
-      
-      return sentences.map((sentence, index) => ({
-        id: index + 1,
-        timestamp: `${Math.floor(index * sceneDuration / 60)}:${String(Math.floor(index * sceneDuration) % 60).padStart(2, '0')}-${Math.floor((index + 1) * sceneDuration / 60)}:${String(Math.floor((index + 1) * sceneDuration) % 60).padStart(2, '0')}`,
-        text: sentence.trim(),
-        visual: `Visual description for scene ${index + 1}: Supporting imagery for "${sentence.trim().substring(0, 30)}..."`,
-        voiceNote: getVoiceDirection(index + 1, sentences.length)
-      }));
-    }
-  };
-
-  const getVoiceDirection = (sceneNumber: number, totalScenes: number) => {
-    if (sceneNumber === 1) return "Enthusiastic opening tone";
-    if (sceneNumber === totalScenes) return "Strong concluding tone";
-    return "Clear and engaging delivery";
-  };
-
-  const scenes = getScenes();
+  const scenes = getScenes(contentItem);
   
   const mockStoryboard = scenes.map((scene, index) => {
     const sceneData = contentItem.scenes?.find(s => s.scene_number === scene.id);
@@ -114,62 +43,12 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
         <p className="text-gray-400">Review and edit your AI-generated video script</p>
       </div>
 
-      {/* Script Header */}
-      <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-white text-xl">{contentItem.title}</CardTitle>
-              <CardDescription className="text-gray-400 mt-2">
-                <div className="flex items-center space-x-4">
-                  <Badge variant="outline" className="border-purple-500/30 text-purple-400">
-                    {contentItem.theme}
-                  </Badge>
-                  <span className="flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {formatDuration(contentItem.duration)}
-                  </span>
-                  <span className="flex items-center">
-                    <Eye className="w-4 h-4 mr-1" />
-                    {scenes.length} scenes
-                  </span>
-                </div>
-              </CardDescription>
-            </div>
-            <div className="flex space-x-2">
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit Script
-              </Button>
-              <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              <Button 
-                className="bg-green-600 hover:bg-green-700" 
-                onClick={handleGenerateVideos}
-                disabled={isGenerating}
-              >
-                <Play className="w-4 h-4 mr-2" />
-                {isGenerating ? "Generating..." : "Generate Videos"}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        
-        {/* Status Progress */}
-        {contentItem.generation_stage && (
-          <CardContent>
-            <ContentStatusProgress
-              generationStage={contentItem.generation_stage}
-              scriptStatus={contentItem.script_status || 'not_started'}
-              videoStatus={contentItem.video_status || 'not_started'}
-              musicStatus={contentItem.music_status || 'not_started'}
-              postStatus={contentItem.post_status || 'not_started'}
-            />
-          </CardContent>
-        )}
-      </Card>
+      <ScriptHeader 
+        contentItem={contentItem}
+        scenes={scenes}
+        onGenerateVideos={handleGenerateVideos}
+        isGenerating={isGenerating}
+      />
 
       {/* Script Content */}
       <Tabs defaultValue="script" className="w-full">
@@ -186,207 +65,19 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
         </TabsList>
 
         <TabsContent value="script" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Scene List */}
-            <div className="lg:col-span-1 space-y-3">
-              <h4 className="text-white font-medium">Scenes</h4>
-              {scenes.map((scene) => (
-                <Card 
-                  key={scene.id}
-                  className={`cursor-pointer transition-all ${
-                    selectedScene === scene.id
-                      ? "bg-blue-600/20 border-blue-500"
-                      : "bg-white/5 border-white/10 hover:bg-white/10"
-                  }`}
-                  onClick={() => setSelectedScene(scene.id)}
-                >
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <Badge variant="outline" className="text-xs">
-                        Scene {scene.id}
-                      </Badge>
-                      <span className="text-xs text-gray-400">{scene.timestamp}</span>
-                    </div>
-                    <p className="text-white text-sm line-clamp-2">{scene.text}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-
-            {/* Scene Details */}
-            <div className="lg:col-span-2">
-              {scenes.find(scene => scene.id === selectedScene) && (
-                <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
-                  <CardHeader>
-                    <CardTitle className="text-white">
-                      Scene {selectedScene} • {scenes.find(scene => scene.id === selectedScene)?.timestamp}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Script Text */}
-                    <div>
-                      <h5 className="text-white font-medium mb-2">Script Text</h5>
-                      <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
-                        <p className="text-white text-lg leading-relaxed">
-                          {scenes.find(scene => scene.id === selectedScene)?.text}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Visual Description */}
-                    <div>
-                      <h5 className="text-white font-medium mb-2">Visual Description</h5>
-                      <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                        <p className="text-purple-200">
-                          {scenes.find(scene => scene.id === selectedScene)?.visual}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Voice Notes */}
-                    <div>
-                      <h5 className="text-white font-medium mb-2">Voice Direction</h5>
-                      <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                        <p className="text-blue-200">
-                          {scenes.find(scene => scene.id === selectedScene)?.voiceNote}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Scene Actions */}
-                    <div className="flex space-x-3">
-                      <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit Scene
-                      </Button>
-                      <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                        <Play className="w-4 h-4 mr-2" />
-                        Preview Audio
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
+          <ScriptTimeline 
+            scenes={scenes}
+            selectedScene={selectedScene}
+            onSceneSelect={setSelectedScene}
+          />
         </TabsContent>
 
         <TabsContent value="storyboard">
-          <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white">Visual Storyboard</CardTitle>
-              <CardDescription className="text-gray-400">
-                AI-generated visual descriptions and video content
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {mockStoryboard.map((board, index) => (
-                  <Card key={index} className="bg-white/5 border border-white/10">
-                    <CardContent className="p-3">
-                      <div className="aspect-video bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
-                        {board.videoUrl && board.videoStatus === 'completed' ? (
-                          <video 
-                            src={board.videoUrl} 
-                            className="w-full h-full object-cover rounded-lg"
-                            controls
-                            muted
-                            preload="metadata"
-                          />
-                        ) : board.videoStatus === 'generating' ? (
-                          <div className="flex flex-col items-center space-y-2">
-                            <Video className="w-6 h-6 text-blue-400 animate-pulse" />
-                            <span className="text-xs text-blue-400">Generating...</span>
-                          </div>
-                        ) : board.videoStatus === 'failed' ? (
-                          <div className="flex flex-col items-center space-y-2">
-                            <Video className="w-6 h-6 text-red-400" />
-                            <span className="text-xs text-red-400">Failed</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">Scene {board.scene}</span>
-                        )}
-                      </div>
-                      
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-medium text-white">Scene {board.scene}</span>
-                        <Badge 
-                          variant="outline" 
-                          className={`text-xs ${
-                            board.videoStatus === 'completed' 
-                              ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                              : board.videoStatus === 'generating'
-                              ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                              : board.videoStatus === 'failed'
-                              ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                              : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
-                          }`}
-                        >
-                          {board.videoStatus.replace('_', ' ')}
-                        </Badge>
-                      </div>
-                      
-                      <p className="text-white text-xs line-clamp-2">{board.description}</p>
-                      
-                      {board.errorMessage && (
-                        <p className="text-red-400 text-xs mt-1 line-clamp-1" title={board.errorMessage}>
-                          Error: {board.errorMessage}
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <Storyboard contentItem={contentItem} storyboard={mockStoryboard} />
         </TabsContent>
 
         <TabsContent value="production">
-          <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="text-white">Production Pipeline</CardTitle>
-              <CardDescription className="text-gray-400">
-                Automated video generation workflow
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {[
-                  { step: "Script Analysis", status: "completed", description: "AI analyzed script for timing and content" },
-                  { step: "Voice Generation", status: "completed", description: "AI voice narration generated with selected voice" },
-                  { step: "Visual Assets", status: contentItem.status === 'draft' ? "completed" : "processing", description: "Requesting video clips from AI models (VEO 3)" },
-                  { step: "Final Assembly", status: contentItem.status === 'published' ? "completed" : "pending", description: "Merging clips, adding overlays and effects" }
-                ].map((item, index) => (
-                  <Card key={index} className="bg-white/5 border border-white/10">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h5 className="text-white font-medium text-sm">{item.step}</h5>
-                        <Badge 
-                          className={
-                            item.status === "completed" 
-                              ? "bg-green-500/20 text-green-400 border-green-500/30"
-                              : item.status === "processing"
-                              ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                              : "bg-gray-500/20 text-gray-400 border-gray-500/30"
-                          }
-                        >
-                          {item.status}
-                        </Badge>
-                      </div>
-                      <p className="text-gray-400 text-xs">{item.description}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              <div className="mt-8">
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-12">
-                  <Wand2 className="w-5 h-5 mr-2" />
-                  Start Video Production
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <ProductionPipeline contentItem={contentItem} />
         </TabsContent>
       </Tabs>
     </div>
