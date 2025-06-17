@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,6 +91,8 @@ export const ChannelCreation = ({
       accountName
     });
     
+    console.log("Component props - isDialog:", isDialog, "onSubmit exists:", !!onSubmit);
+    
     if (!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || !platform || !accountName || needsTopics) {
       toast({
         title: "Missing Information",
@@ -110,7 +111,7 @@ export const ChannelCreation = ({
       accountName
     };
 
-    // If used in dialog mode with custom onSubmit
+    // Only use dialog mode if explicitly set AND onSubmit is provided
     if (isDialog && onSubmit) {
       const formData = {
         platform,
