@@ -91,42 +91,20 @@ serve(async (req) => {
       apiVersion: "2023-10-16" 
     });
 
-    // Map schedule to exact product IDs
-    const scheduleToProductId = {
-      "monthly": "prod_SW0OqaNzrSqdhK",
-      "weekly": "prod_SW0PDKRr1urBQ8", 
-      "daily": "prod_SW0RQnRFtx2m24",
-      "twice-daily": "prod_SW0SWBbhgkOCuy"
+    // Define schedule pricing (these will be created dynamically)
+    const schedulePricing = {
+      "monthly": { amount: 1500, name: "Monthly Plan" },     // $15/month
+      "weekly": { amount: 2000, name: "Weekly Plan" },       // $20/month  
+      "daily": { amount: 3000, name: "Daily Plan" },         // $30/month
+      "twice-daily": { amount: 4500, name: "Twice Daily Plan" } // $45/month
     };
 
-    const selectedProductId = scheduleToProductId[schedule as keyof typeof scheduleToProductId];
-    if (!selectedProductId) {
+    const selectedPricing = schedulePricing[schedule as keyof typeof schedulePricing];
+    if (!selectedPricing) {
       throw new Error(`Invalid schedule selected: ${schedule}`);
     }
 
-    logStep("Product ID selected", { schedule, selectedProductId });
-
-    // Get the price for this product
-    const prices = await stripe.prices.list({ 
-      product: selectedProductId,
-      active: true,
-      limit: 10
-    });
-
-    logStep("Found prices for product", { 
-      productId: selectedProductId,
-      priceCount: prices.data.length,
-      prices: prices.data.map(p => ({ id: p.id, amount: p.unit_amount, recurring: p.recurring }))
-    });
-
-    if (prices.data.length === 0) {
-      throw new Error(`No active prices found for product "${selectedProductId}"`);
-    }
-
-    // Use the first active price
-    const selectedPriceId = prices.data[0].id;
-
-    logStep("Selected price", { priceId: selectedPriceId, productId: selectedProductId });
+    logStep("Schedule pricing selected", { schedule, pricing: selectedPricing });
 
     // Check if customer exists
     logStep("Checking for existing Stripe customer...");
@@ -143,14 +121,24 @@ serve(async (req) => {
     const origin = req.headers.get("origin") || req.headers.get("referer") || "https://loving-macaroon-0e4f47.netlify.app";
     logStep("Origin determined", { origin });
 
-    // Create checkout session
+    // Create checkout session with dynamic pricing
     logStep("Creating Stripe checkout session...");
     const sessionData = {
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price: selectedPriceId,
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: selectedPricing.name,
+              description: `${channelName} - ${selectedPricing.name}`,
+            },
+            unit_amount: selectedPricing.amount,
+            recurring: {
+              interval: "month",
+            },
+          },
           quantity: 1,
         },
       ],
@@ -170,7 +158,7 @@ serve(async (req) => {
       customerEmail: sessionData.customer_email,
       lineItemsCount: sessionData.line_items.length,
       mode: sessionData.mode,
-      priceId: selectedPriceId,
+      amount: selectedPricing.amount,
       successUrl: sessionData.success_url,
       cancelUrl: sessionData.cancel_url
     });
