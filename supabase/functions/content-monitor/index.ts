@@ -51,6 +51,8 @@ serve(async (req) => {
     for (const queueItem of channelsToCheck || []) {
       const channel = queueItem.content_channels
       
+      console.log(`Checking channel: ${channel.name} (ID: ${channel.id})`)
+      
       // Count existing content items with status 'ready' or 'published'
       const { count: contentCount, error: countError } = await supabase
         .from('content_items')
@@ -75,21 +77,28 @@ serve(async (req) => {
       const requiredCount = requirementData
       const currentCount = contentCount || 0
       
-      console.log(`Channel ${channel.name}: has ${currentCount}, needs ${requiredCount}`)
+      console.log(`Channel ${channel.name}: has ${currentCount} content items, needs ${requiredCount} (schedule: ${channel.schedule})`)
 
       // If we need more content, add to generation queue
       if (currentCount < requiredCount) {
         const itemsToGenerate = requiredCount - currentCount
 
-        // Check if there's already a pending generation request
+        console.log(`Channel ${channel.name} needs ${itemsToGenerate} more content items`)
+
+        // Check if there's already a pending or processing generation request
         const { data: existingGeneration, error: existingError } = await supabase
           .from('content_generation_queue')
           .select('*')
           .eq('channel_id', channel.id)
-          .eq('status', 'pending')
-          .single()
+          .in('status', ['pending', 'processing'])
+          .maybeSingle()
 
-        if (!existingError && !existingGeneration) {
+        if (existingError) {
+          console.error(`Error checking existing generation queue for channel ${channel.id}:`, existingError)
+          continue
+        }
+
+        if (!existingGeneration) {
           // Add to generation queue
           const { error: insertError } = await supabase
             .from('content_generation_queue')
@@ -97,15 +106,20 @@ serve(async (req) => {
               channel_id: channel.id,
               items_to_generate: itemsToGenerate,
               priority: channel.schedule === 'twice-daily' ? 3 : 
-                       channel.schedule === 'daily' ? 2 : 1
+                       channel.schedule === 'daily' ? 2 : 1,
+              status: 'pending'
             })
 
           if (insertError) {
             console.error(`Error adding to generation queue for channel ${channel.id}:`, insertError)
           } else {
-            console.log(`Added ${itemsToGenerate} items to generation queue for channel ${channel.name}`)
+            console.log(`✅ Added ${itemsToGenerate} items to generation queue for channel ${channel.name}`)
           }
+        } else {
+          console.log(`Channel ${channel.name} already has a ${existingGeneration.status} generation request for ${existingGeneration.items_to_generate} items`)
         }
+      } else {
+        console.log(`✅ Channel ${channel.name} has sufficient content (${currentCount}/${requiredCount})`)
       }
 
       // Update next check time based on schedule
@@ -113,19 +127,28 @@ serve(async (req) => {
                                channel.schedule === 'daily' ? '4 hours' :
                                channel.schedule === 'weekly' ? '12 hours' : '24 hours'
 
+      const nextCheckTime = new Date(Date.now() + getIntervalMs(nextCheckInterval)).toISOString()
+      
+      console.log(`Next check for channel ${channel.name} scheduled for: ${nextCheckTime}`)
+
       await supabase
         .from('content_monitoring_queue')
         .update({
           last_checked_at: new Date().toISOString(),
-          next_check_at: new Date(Date.now() + getIntervalMs(nextCheckInterval)).toISOString()
+          next_check_at: nextCheckTime
         })
         .eq('id', queueItem.id)
     }
 
-    return new Response(JSON.stringify({ 
+    const summary = {
       success: true, 
-      channelsChecked: channelsToCheck?.length || 0 
-    }), {
+      channelsChecked: channelsToCheck?.length || 0,
+      timestamp: new Date().toISOString()
+    }
+
+    console.log('Content monitoring completed:', summary)
+
+    return new Response(JSON.stringify(summary), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
