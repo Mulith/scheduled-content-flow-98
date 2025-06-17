@@ -103,7 +103,7 @@ export const VoiceSelectorWithPreview = ({
       
       toast({
         title: "Voice Preview",
-        description: `Playing ${voiceData.name} voice sample...`,
+        description: `Playing ${voiceData.name} (${voiceData.accent} accent) voice sample...`,
       });
 
     } catch (error) {
