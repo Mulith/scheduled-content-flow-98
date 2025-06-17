@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,11 +27,17 @@ export const ChannelCreation = () => {
   const { createCheckoutSession, isLoading: checkoutLoading } = useStripeCheckout();
 
   const handleVideoTypeToggle = (videoTypeId: string) => {
-    setSelectedVideoTypes(prev => 
-      prev.includes(videoTypeId) 
+    console.log("Toggling video type:", videoTypeId);
+    console.log("Current selected types:", selectedVideoTypes);
+    
+    setSelectedVideoTypes(prev => {
+      const newSelection = prev.includes(videoTypeId) 
         ? prev.filter(id => id !== videoTypeId)
-        : [...prev, videoTypeId]
-    );
+        : [...prev, videoTypeId];
+      
+      console.log("New selected types:", newSelection);
+      return newSelection;
+    });
   };
 
   const handleTopicToggle = (topic: string) => {
@@ -144,6 +149,15 @@ export const ChannelCreation = () => {
 
   const handleCreateChannel = async () => {
     const needsTopics = topicSelection !== "ai-decide" && selectedTopics.length === 0;
+    
+    console.log("Creating channel with:", {
+      channelName,
+      selectedSchedule,
+      selectedVoice,
+      selectedVideoTypes,
+      topicSelection,
+      selectedTopics
+    });
     
     if (!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || needsTopics) {
       toast({
