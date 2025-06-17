@@ -27,18 +27,22 @@ export const ChannelCreation = () => {
   const { createCheckoutSession, isLoading: checkoutLoading } = useStripeCheckout();
 
   const handleVideoTypeToggle = (videoTypeId: string) => {
-    console.log("Toggling video type:", videoTypeId);
-    console.log("Current selected types:", selectedVideoTypes);
+    console.log("ChannelCreation - handleVideoTypeToggle called with:", videoTypeId);
+    console.log("ChannelCreation - Current selectedVideoTypes before toggle:", selectedVideoTypes);
     
     setSelectedVideoTypes(prev => {
       const newSelection = prev.includes(videoTypeId) 
         ? prev.filter(id => id !== videoTypeId)
         : [...prev, videoTypeId];
       
-      console.log("New selected types:", newSelection);
+      console.log("ChannelCreation - New selectedVideoTypes after toggle:", newSelection);
       return newSelection;
     });
   };
+
+  // Log every render to see what's happening
+  console.log("ChannelCreation RENDER - selectedVideoTypes:", selectedVideoTypes);
+  console.log("ChannelCreation RENDER - handleVideoTypeToggle function:", handleVideoTypeToggle);
 
   const handleTopicToggle = (topic: string) => {
     setSelectedTopics(prev => 
@@ -195,10 +199,14 @@ export const ChannelCreation = () => {
             setChannelName={setChannelName}
           />
 
-          <VideoStyleSelector 
-            selectedVideoTypes={selectedVideoTypes}
-            onVideoTypeToggle={handleVideoTypeToggle}
-          />
+          <div className="border border-red-500 p-4 rounded">
+            <h3 className="text-red-400 mb-2">DEBUG: Video Style Selector</h3>
+            <p className="text-white text-sm">Current selectedVideoTypes: {JSON.stringify(selectedVideoTypes)}</p>
+            <VideoStyleSelector 
+              selectedVideoTypes={selectedVideoTypes}
+              onVideoTypeToggle={handleVideoTypeToggle}
+            />
+          </div>
 
           <ScheduleSelector 
             selectedSchedule={selectedSchedule}
@@ -209,7 +217,7 @@ export const ChannelCreation = () => {
             selectedVoice={selectedVoice}
             onVoiceSelect={setSelectedVoice}
             playingVoice={playingVoice}
-            onVoicePreview={handleVoicePreview}
+            onVoicePreview={setPlayingVoice}
           />
 
           <TopicSelector 

@@ -19,7 +19,8 @@ const videoStyleOptions = [
 ];
 
 export const VideoStyleSelector = ({ selectedVideoTypes, onVideoTypeToggle }: VideoStyleSelectorProps) => {
-  console.log("VideoStyleSelector - selectedVideoTypes:", selectedVideoTypes);
+  console.log("VideoStyleSelector RENDERED - selectedVideoTypes:", selectedVideoTypes);
+  console.log("VideoStyleSelector RENDERED - onVideoTypeToggle:", typeof onVideoTypeToggle);
 
   return (
     <div className="space-y-4">
@@ -31,6 +32,7 @@ export const VideoStyleSelector = ({ selectedVideoTypes, onVideoTypeToggle }: Vi
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {videoStyleOptions.map((style) => {
           const isSelected = selectedVideoTypes.includes(style.id);
+          console.log(`Style ${style.id} - isSelected:`, isSelected);
           
           return (
             <Card
@@ -40,14 +42,20 @@ export const VideoStyleSelector = ({ selectedVideoTypes, onVideoTypeToggle }: Vi
                   ? "bg-blue-600/30 border-blue-400 border-2 shadow-lg shadow-blue-500/20"
                   : "bg-white/5 border-white/20 hover:bg-white/10 hover:border-white/30"
               }`}
-              onClick={() => onVideoTypeToggle(style.id)}
+              onClick={() => {
+                console.log("Card clicked for style:", style.id);
+                onVideoTypeToggle(style.id);
+              }}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-3">
                     <Checkbox 
                       checked={isSelected}
-                      onCheckedChange={() => onVideoTypeToggle(style.id)}
+                      onCheckedChange={() => {
+                        console.log("Checkbox clicked for style:", style.id);
+                        onVideoTypeToggle(style.id);
+                      }}
                       className={`${
                         isSelected 
                           ? "data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" 
