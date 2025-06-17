@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
     
-    // Your curated list of voices with real ElevenLabs IDs and accurate previews
+    // Your curated list of voices with real ElevenLabs IDs and correct accents
     const curatedVoices = [
       // Female voices
       {
@@ -40,18 +40,18 @@ serve(async (req) => {
         name: "Matilda",
         type: "free",
         description: "Energetic female voice great for motivational content",
-        accent: "British",
+        accent: "Australian",
         gender: "female",
-        preview: "Right then! I'm Matilda, and I'm absolutely thrilled to motivate you today with my energetic British accent. Let's get started!",
+        preview: "G'day! I'm Matilda, and I'm absolutely stoked to motivate you today with my energetic Australian accent. Let's get cracking!",
       },
       {
         id: "aRlmTYIQo6Tlg5SlulGC", // Emma
         name: "Emma",
         type: "free",
         description: "Clear, articulate female voice perfect for storytelling",
-        accent: "American",
+        accent: "British",
         gender: "female",
-        preview: "Hello everyone! I'm Emma, and I love telling stories with my clear, articulate American voice. Let me share something wonderful with you.",
+        preview: "Hello there! I'm Emma, and I do love telling stories with my clear, articulate British voice. Let me share something rather wonderful with you.",
       },
       {
         id: "ZF6FPAbjXT4488VcRRnw", // Grace
@@ -60,7 +60,7 @@ serve(async (req) => {
         description: "Elegant female voice ideal for premium content",
         accent: "British",
         gender: "female",
-        preview: "Good afternoon! I'm Grace, speaking with an elegant British accent. I'm delighted to elevate your listening experience today.",
+        preview: "Good afternoon! I'm Grace, speaking with an elegant British accent. I'm frightfully delighted to elevate your listening experience today.",
       },
       {
         id: "WzsP0bfiCpSDfNgLrUuN", // Sophia
@@ -77,18 +77,18 @@ serve(async (req) => {
         name: "Charlie",
         type: "free",
         description: "Versatile male voice perfect for various content types",
-        accent: "American",
+        accent: "Australian",
         gender: "male",
-        preview: "Hey everyone! I'm Charlie, bringing you content with my versatile American voice. I'm ready to adapt to whatever style you need.",
+        preview: "G'day mate! I'm Charlie, bringing you content with my versatile Australian voice. I'm ready to adapt to whatever style you need, no worries!",
       },
       {
         id: "JBFqnCBsd6RMkjVDRZzb", // George
         name: "George",
         type: "free",
         description: "Deep, authoritative male voice perfect for business content",
-        accent: "American",
+        accent: "British",
         gender: "male",
-        preview: "Good day, I'm George. With my deep, authoritative American voice, I'm here to guide you through today's business insights with confidence.",
+        preview: "Good day, I'm George. With my deep, authoritative British voice, I'm here to guide you through today's business insights with utmost confidence.",
       },
       {
         id: "bIHbv24MWmeRgasZH58o", // Will
@@ -97,7 +97,7 @@ serve(async (req) => {
         description: "Engaging male voice great for storytelling and narratives",
         accent: "British",
         gender: "male",
-        preview: "Greetings! I'm Will, and I'm delighted to share stories with you using my engaging British accent. Shall we begin this tale?",
+        preview: "Greetings! I'm Will, and I'm absolutely delighted to share stories with you using my engaging British accent. Shall we begin this tale?",
       },
       {
         id: "TX3LPaxmHKxFdv7VOQHJ", // Liam
@@ -134,7 +134,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error fetching voices:", error);
     
-    // Fallback voices with the same real ElevenLabs IDs and accurate previews
+    // Fallback voices with the same real ElevenLabs IDs and correct accents
     const fallbackVoices = [
       {
         id: "FGY2WhTYpPnrIDTdsKH5",
@@ -159,18 +159,18 @@ serve(async (req) => {
         name: "Matilda",
         type: "free",
         description: "Energetic female voice",
-        accent: "British",
+        accent: "Australian",
         gender: "female",
-        preview: "Right then! I'm Matilda with my energetic British accent.",
+        preview: "G'day! I'm Matilda with my energetic Australian accent.",
       },
       {
         id: "aRlmTYIQo6Tlg5SlulGC",
         name: "Emma",
         type: "free",
         description: "Clear, articulate female voice",
-        accent: "American",
+        accent: "British",
         gender: "female",
-        preview: "Hello! I'm Emma with my clear American voice.",
+        preview: "Hello! I'm Emma with my clear British voice.",
       },
       {
         id: "ZF6FPAbjXT4488VcRRnw",
@@ -195,18 +195,18 @@ serve(async (req) => {
         name: "Charlie",
         type: "free",
         description: "Versatile male voice",
-        accent: "American",
+        accent: "Australian",
         gender: "male",
-        preview: "Hey everyone! I'm Charlie with my versatile American voice.",
+        preview: "G'day mate! I'm Charlie with my versatile Australian voice.",
       },
       {
         id: "JBFqnCBsd6RMkjVDRZzb",
         name: "George",
         type: "free",
         description: "Deep, authoritative male voice",
-        accent: "American",
+        accent: "British",
         gender: "male",
-        preview: "Good day, I'm George with my deep American voice.",
+        preview: "Good day, I'm George with my deep British voice.",
       },
       {
         id: "bIHbv24MWmeRgasZH58o",
