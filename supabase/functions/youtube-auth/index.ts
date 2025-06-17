@@ -103,9 +103,13 @@ serve(async (req) => {
         throw new Error('Failed to get access token')
       }
 
-      // Fetch all channels the user has access to (not just mine=true)
-      const channelResponse = await fetch(
-        'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&managedByMe=true&maxResults=50',
+      // Try multiple approaches to get all available channels
+      const allChannels = []
+      
+      // Approach 1: Try to get channels the user owns (mine=true)
+      console.log('Fetching user\'s own channels...')
+      const ownChannelsResponse = await fetch(
+        'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&mine=true',
         {
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
@@ -113,32 +117,49 @@ serve(async (req) => {
         }
       )
 
-      const channelData = await channelResponse.json()
-      console.log('Channel API response:', channelData)
+      const ownChannelsData = await ownChannelsResponse.json()
+      console.log('Own channels response:', ownChannelsData)
       
-      if (!channelData.items || channelData.items.length === 0) {
-        // Fallback to mine=true if managedByMe doesn't return results
-        console.log('No channels found with managedByMe, trying mine=true')
-        const fallbackResponse = await fetch(
-          'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&mine=true',
+      if (ownChannelsData.items && ownChannelsData.items.length > 0) {
+        allChannels.push(...ownChannelsData.items)
+      }
+
+      // Approach 2: Try to get managed channels (for brand accounts)
+      console.log('Attempting to fetch managed channels...')
+      try {
+        const managedChannelsResponse = await fetch(
+          'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&managedByMe=true&maxResults=50',
           {
             headers: {
               'Authorization': `Bearer ${tokenData.access_token}`,
             },
           }
         )
-        const fallbackData = await fallbackResponse.json()
-        console.log('Fallback channel API response:', fallbackData)
+
+        const managedChannelsData = await managedChannelsResponse.json()
+        console.log('Managed channels response:', managedChannelsData)
         
-        if (!fallbackData.items || fallbackData.items.length === 0) {
-          throw new Error('No YouTube channels found for this account')
+        if (managedChannelsData.items && managedChannelsData.items.length > 0) {
+          // Add any additional channels that aren't already in the list
+          for (const channel of managedChannelsData.items) {
+            if (!allChannels.find(existing => existing.id === channel.id)) {
+              allChannels.push(channel)
+            }
+          }
         }
-        channelData.items = fallbackData.items
+      } catch (managedError) {
+        console.log('Managed channels fetch failed (expected for most accounts):', managedError)
       }
+
+      if (allChannels.length === 0) {
+        throw new Error('No YouTube channels found for this account')
+      }
+
+      console.log(`Found ${allChannels.length} total channels`)
 
       // Store all channels in the database
       const channels = []
-      for (const channel of channelData.items) {
+      for (const channel of allChannels) {
         const channelRecord = {
           user_id: user.id,
           channel_id: channel.id,
