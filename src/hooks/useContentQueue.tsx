@@ -45,26 +45,33 @@ export const useContentQueue = () => {
   // Manually trigger content monitoring
   const triggerMonitoring = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/content-monitor', {
-        method: 'POST',
+      console.log('Triggering content monitoring...');
+      const { data, error } = await supabase.functions.invoke('content-monitor', {
+        body: {}
       });
-      if (!response.ok) {
-        throw new Error('Failed to trigger monitoring');
+      
+      if (error) {
+        console.error('Content monitor error:', error);
+        throw error;
       }
-      return response.json();
+      
+      console.log('Content monitor response:', data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Content monitoring triggered successfully:', data);
       toast({
         title: "Monitoring Triggered",
-        description: "Content monitoring has been manually triggered",
+        description: `Content monitoring completed. Checked ${data?.channelsChecked || 0} channels.`,
       });
       queryClient.invalidateQueries({ queryKey: ['content-generation-queue'] });
       queryClient.invalidateQueries({ queryKey: ['content-monitoring-queue'] });
     },
     onError: (error: Error) => {
+      console.error('Error triggering monitoring:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to trigger monitoring",
         variant: "destructive",
       });
     },
@@ -73,25 +80,32 @@ export const useContentQueue = () => {
   // Manually trigger content generation
   const triggerGeneration = useMutation({
     mutationFn: async () => {
-      const response = await fetch('/api/content-generator', {
-        method: 'POST',
+      console.log('Triggering content generation...');
+      const { data, error } = await supabase.functions.invoke('content-generator', {
+        body: {}
       });
-      if (!response.ok) {
-        throw new Error('Failed to trigger generation');
+      
+      if (error) {
+        console.error('Content generator error:', error);
+        throw error;
       }
-      return response.json();
+      
+      console.log('Content generator response:', data);
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('Content generation triggered successfully:', data);
       toast({
         title: "Generation Triggered",
-        description: "Content generation has been manually triggered",
+        description: `Content generation completed. Processed ${data?.processed || 0} requests.`,
       });
       queryClient.invalidateQueries({ queryKey: ['content-generation-queue'] });
     },
     onError: (error: Error) => {
+      console.error('Error triggering generation:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: error.message || "Failed to trigger generation",
         variant: "destructive",
       });
     },
