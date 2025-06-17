@@ -25,24 +25,43 @@ serve(async (req) => {
     const { schedule, channelName, channelData } = await req.json();
     logStep("Request data received", { schedule, channelName, hasChannelData: !!channelData });
     
+    // Validate required fields
+    if (!schedule || !channelName) {
+      throw new Error("Missing required fields: schedule and channelName are required");
+    }
+    
     // Get authenticated user
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("No authorization header provided");
+    }
+
     const token = authHeader.replace("Bearer ", "");
-    const { data } = await supabaseClient.auth.getUser(token);
-    const user = data.user;
+    const { data, error: authError } = await supabaseClient.auth.getUser(token);
     
+    if (authError) {
+      logStep("Authentication error", { error: authError });
+      throw new Error(`Authentication failed: ${authError.message}`);
+    }
+    
+    const user = data.user;
     if (!user?.email) {
-      throw new Error("User not authenticated");
+      throw new Error("User not authenticated or email not available");
     }
 
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { 
+    const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeSecretKey) {
+      throw new Error("Stripe secret key not configured");
+    }
+
+    const stripe = new Stripe(stripeSecretKey, { 
       apiVersion: "2023-10-16" 
     });
 
@@ -56,7 +75,7 @@ serve(async (req) => {
 
     const selectedPlan = pricing[schedule as keyof typeof pricing];
     if (!selectedPlan) {
-      throw new Error("Invalid schedule selected");
+      throw new Error(`Invalid schedule selected: ${schedule}`);
     }
 
     logStep("Plan selected", selectedPlan);
@@ -68,8 +87,11 @@ serve(async (req) => {
       customerId = customers.data[0].id;
       logStep("Existing customer found", { customerId });
     } else {
-      logStep("No existing customer found");
+      logStep("No existing customer found, will create new one");
     }
+
+    const origin = req.headers.get("origin") || req.headers.get("referer") || "http://localhost:5173";
+    logStep("Origin determined", { origin });
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -89,8 +111,8 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
-      success_url: `${req.headers.get("origin")}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/`,
+      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/`,
       metadata: {
         channel_name: channelName,
         schedule: schedule,
@@ -100,6 +122,10 @@ serve(async (req) => {
     });
 
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
+
+    if (!session.url) {
+      throw new Error("Failed to create checkout session URL");
+    }
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

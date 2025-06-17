@@ -21,6 +21,8 @@ export const useStripeCheckout = () => {
     try {
       setIsLoading(true);
       
+      console.log('Creating checkout session with:', { schedule, channelName, channelData });
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { 
           schedule, 
@@ -29,22 +31,47 @@ export const useStripeCheckout = () => {
         }
       });
 
+      console.log('Checkout response:', { data, error });
+
       if (error) {
-        throw error;
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to create checkout session');
       }
 
-      if (data?.url) {
+      if (!data) {
+        throw new Error('No response data received from checkout function');
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.url) {
+        console.log('Opening checkout URL:', data.url);
         // Open Stripe checkout in a new tab
-        window.open(data.url, '_blank');
+        const newWindow = window.open(data.url, '_blank');
+        
+        if (!newWindow) {
+          // Fallback if popup blocked
+          window.location.href = data.url;
+        }
+        
+        toast({
+          title: "Redirecting to Checkout",
+          description: "Opening Stripe checkout...",
+        });
+        
         return true;
       } else {
-        throw new Error('No checkout URL received');
+        throw new Error('No checkout URL received from Stripe');
       }
     } catch (error) {
       console.error('Checkout error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to create checkout session";
+      
       toast({
         title: "Checkout Error",
-        description: error instanceof Error ? error.message : "Failed to create checkout session",
+        description: errorMessage,
         variant: "destructive",
       });
       return false;
