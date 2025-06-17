@@ -91,65 +91,42 @@ serve(async (req) => {
       apiVersion: "2023-10-16" 
     });
 
-    // Find the correct price ID based on schedule
-    logStep("Looking up Stripe products and prices...");
-    const products = await stripe.products.list({ limit: 100 });
-    logStep("Found products", { count: products.data.length, products: products.data.map(p => ({ id: p.id, name: p.name })) });
-
-    let selectedPriceId = null;
-    let productName = "";
-
-    // Map schedule to product names (adjust these to match your exact product names)
-    const scheduleToProductName = {
-      "monthly": "Monthly Post",
-      "weekly": "Weekly Post", 
-      "daily": "Daily Post",
-      "twice-daily": "Twice Daily Post"
+    // Map schedule to exact product IDs
+    const scheduleToProductId = {
+      "monthly": "prod_SW0OqaNzrSqdhK",
+      "weekly": "prod_SW0PDKRr1urBQ8", 
+      "daily": "prod_SW0RQnRFtx2m24",
+      "twice-daily": "prod_SW0SWBbhgkOCuy"
     };
 
-    const targetProductName = scheduleToProductName[schedule as keyof typeof scheduleToProductName];
-    if (!targetProductName) {
+    const selectedProductId = scheduleToProductId[schedule as keyof typeof scheduleToProductId];
+    if (!selectedProductId) {
       throw new Error(`Invalid schedule selected: ${schedule}`);
     }
 
-    logStep("Looking for product", { targetProductName, schedule });
-
-    // Find the product that matches our schedule
-    const matchingProduct = products.data.find(product => 
-      product.name.toLowerCase() === targetProductName.toLowerCase()
-    );
-
-    if (!matchingProduct) {
-      logStep("Product not found", { 
-        targetProductName, 
-        availableProducts: products.data.map(p => p.name) 
-      });
-      throw new Error(`Product "${targetProductName}" not found in Stripe. Available products: ${products.data.map(p => p.name).join(', ')}`);
-    }
-
-    logStep("Found matching product", { productId: matchingProduct.id, productName: matchingProduct.name });
+    logStep("Product ID selected", { schedule, selectedProductId });
 
     // Get the price for this product
     const prices = await stripe.prices.list({ 
-      product: matchingProduct.id,
+      product: selectedProductId,
       active: true,
       limit: 10
     });
 
     logStep("Found prices for product", { 
+      productId: selectedProductId,
       priceCount: prices.data.length,
       prices: prices.data.map(p => ({ id: p.id, amount: p.unit_amount, recurring: p.recurring }))
     });
 
     if (prices.data.length === 0) {
-      throw new Error(`No active prices found for product "${matchingProduct.name}"`);
+      throw new Error(`No active prices found for product "${selectedProductId}"`);
     }
 
-    // Use the first active price (you might want to add logic to select specific price)
-    selectedPriceId = prices.data[0].id;
-    productName = matchingProduct.name;
+    // Use the first active price
+    const selectedPriceId = prices.data[0].id;
 
-    logStep("Selected price", { priceId: selectedPriceId, productName });
+    logStep("Selected price", { priceId: selectedPriceId, productId: selectedProductId });
 
     // Check if customer exists
     logStep("Checking for existing Stripe customer...");
