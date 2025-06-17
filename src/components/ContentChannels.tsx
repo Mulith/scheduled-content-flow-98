@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { VideoStyleSelector } from "./VideoStyleSelector";
 import { VoiceSelectorWithPreview } from "./VoiceSelectorWithPreview";
 import { TopicSelection } from "./TopicSelection";
-import { ChannelCreationForm } from "./ChannelCreationForm";
+import { ChannelCreation } from "./ChannelCreation";
 
 interface ContentChannel {
   id: string;
@@ -220,11 +220,11 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
               </DialogDescription>
             </DialogHeader>
             
-            <ChannelCreationForm
+            <ChannelCreation
+              isDialog={true}
               onClose={() => setIsCreateDialogOpen(false)}
               onSubmit={handleChannelFormSubmit}
               isCreating={false}
-              connectedYouTubeChannels={connectedYouTubeChannels}
               playingVoice={playingVoice}
               onVoicePreview={setPlayingVoice}
             />
