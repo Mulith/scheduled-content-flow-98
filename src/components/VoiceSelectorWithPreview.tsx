@@ -40,7 +40,7 @@ export const VoiceSelectorWithPreview = ({
       return;
     }
 
-    // Find the voice data
+    // Find the voice data from our centralized source
     const voiceData = voices.find(v => v.id === voiceId);
     if (!voiceData) {
       console.error("Voice not found:", voiceId);
@@ -101,6 +101,7 @@ export const VoiceSelectorWithPreview = ({
 
       await audio.play();
       
+      // Use the voice data from our centralized source to ensure consistency
       toast({
         title: "Voice Preview",
         description: `Playing ${voiceData.name} (${voiceData.accent} accent) voice sample...`,
