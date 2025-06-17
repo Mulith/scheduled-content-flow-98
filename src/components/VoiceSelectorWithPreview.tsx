@@ -27,6 +27,8 @@ export const VoiceSelectorWithPreview = ({
   const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
 
   const handleVoicePreview = async (voiceId: string) => {
+    console.log(`Attempting to preview voice: ${voiceId}`);
+    
     // Stop any currently playing audio
     if (audioRef.current) {
       audioRef.current.pause();
@@ -50,29 +52,69 @@ export const VoiceSelectorWithPreview = ({
       setLoadingPreview(voiceId);
       
       console.log(`Starting voice preview for ${voiceData.name} (${voiceId})`);
+      console.log(`Sample URL: ${voiceData.sampleUrl}`);
       
-      // Use pre-recorded sample instead of API call
-      const audio = new Audio(voiceData.sampleUrl);
+      // Create audio element and test the URL
+      const audio = new Audio();
       audioRef.current = audio;
 
+      // Set up event handlers before setting the src
+      audio.onloadstart = () => {
+        console.log("Audio load started");
+      };
+
+      audio.oncanplay = () => {
+        console.log("Audio can start playing");
+      };
+
       audio.onplay = () => {
+        console.log("Audio started playing");
         onVoicePreview(voiceId);
       };
 
       audio.onended = () => {
+        console.log("Audio finished playing");
         onVoicePreview("");
       };
 
       audio.onerror = (e) => {
         console.error("Audio playback error:", e);
+        console.error("Failed URL:", voiceData.sampleUrl);
         onVoicePreview("");
+        
+        // Try to provide more specific error information
+        const audioError = audio.error;
+        let errorMessage = "Failed to play the audio preview";
+        
+        if (audioError) {
+          switch (audioError.code) {
+            case MediaError.MEDIA_ERR_ABORTED:
+              errorMessage = "Audio playback was aborted";
+              break;
+            case MediaError.MEDIA_ERR_NETWORK:
+              errorMessage = "Network error while loading audio";
+              break;
+            case MediaError.MEDIA_ERR_DECODE:
+              errorMessage = "Audio decoding error";
+              break;
+            case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              errorMessage = "Audio format not supported or file not found";
+              break;
+          }
+        }
+        
         toast({
-          title: "Audio Playback Error",
-          description: "Failed to play the audio preview",
+          title: "Audio Preview Error",
+          description: errorMessage,
           variant: "destructive",
         });
       };
 
+      // Set the audio source
+      audio.src = voiceData.sampleUrl;
+      
+      // Load and play the audio
+      audio.load();
       await audio.play();
       
       toast({
@@ -82,9 +124,10 @@ export const VoiceSelectorWithPreview = ({
 
     } catch (error) {
       console.error('Voice preview failed:', error);
+      onVoicePreview("");
       toast({
         title: "Voice Preview Error",
-        description: "Unable to play voice preview. Please try again.",
+        description: `Unable to play voice preview for ${voiceData.name}. The sample may not be available.`,
         variant: "destructive",
       });
     } finally {
