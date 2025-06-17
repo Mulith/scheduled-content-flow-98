@@ -76,7 +76,7 @@ export const useVoices = () => {
           description: "Clear, articulate female voice perfect for storytelling",
           accent: "Australian",
           gender: "female",
-          preview: "G'day! I'm Emma, and I absolutely love telling stories with my clear, articulate Australian voice. Let me share something wonderful with you, mate!",
+          preview: "Hello! I'm Emma, and I absolutely love telling stories with my clear, articulate Australian voice. Let me share something wonderful with you today.",
         },
         {
           id: "ZF6FPAbjXT4488VcRRnw",
@@ -104,7 +104,7 @@ export const useVoices = () => {
           description: "Versatile male voice perfect for various content types",
           accent: "Australian",
           gender: "male",
-          preview: "G'day mate! I'm Charlie, bringing you content with my versatile Australian voice. I'm ready to adapt to whatever style you need, no worries!",
+          preview: "Hello there! I'm Charlie, bringing you content with my versatile Australian voice. I'm ready to adapt to whatever style you need today!",
         },
         {
           id: "JBFqnCBsd6RMkjVDRZzb",
