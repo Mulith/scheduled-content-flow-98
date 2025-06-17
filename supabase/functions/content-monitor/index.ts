@@ -27,45 +27,38 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     console.log('Supabase client created successfully')
 
-    // Get channels that need checking and are active
-    console.log('Fetching channels to check...')
-    const { data: channelsToCheck, error: channelsError } = await supabase
-      .from('content_monitoring_queue')
+    // Get all active channels directly from content_channels table
+    console.log('Fetching active channels...')
+    const { data: activeChannels, error: channelsError } = await supabase
+      .from('content_channels')
       .select(`
-        *,
-        content_channels!inner(
-          id,
-          name,
-          schedule,
-          is_active,
-          selected_topics,
-          topic_mode,
-          selected_video_types,
-          user_id
-        )
+        id,
+        name,
+        schedule,
+        is_active,
+        selected_topics,
+        topic_mode,
+        selected_video_types,
+        user_id
       `)
-      .eq('status', 'active')
-      .eq('content_channels.is_active', true)
-      .lte('next_check_at', new Date().toISOString())
+      .eq('is_active', true)
 
     if (channelsError) {
-      console.error('Error fetching channels to check:', channelsError)
+      console.error('Error fetching active channels:', channelsError)
       return new Response(JSON.stringify({ 
         error: channelsError.message,
-        details: 'Failed to fetch channels from monitoring queue'
+        details: 'Failed to fetch active channels'
       }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    console.log(`Found ${channelsToCheck?.length || 0} channels to check:`, channelsToCheck?.map(c => c.content_channels?.name))
+    console.log(`Found ${activeChannels?.length || 0} active channels:`, activeChannels?.map(c => c.name))
 
     let channelsProcessed = 0;
 
-    for (const queueItem of channelsToCheck || []) {
-      const channel = queueItem.content_channels
-      
+    for (const channel of activeChannels || []) {
       console.log(`Processing channel: ${channel.name} (ID: ${channel.id})`)
       
       // Count existing content items with status 'ready' or 'published'
@@ -142,36 +135,13 @@ serve(async (req) => {
         console.log(`✅ Channel ${channel.name} has sufficient content (${currentCount}/${requiredCount})`)
       }
 
-      // Update next check time based on schedule
-      const nextCheckInterval = channel.schedule === 'twice-daily' ? '2 hours' :
-                               channel.schedule === 'daily' ? '4 hours' :
-                               channel.schedule === 'weekly' ? '12 hours' : '24 hours'
-
-      const nextCheckTime = new Date(Date.now() + getIntervalMs(nextCheckInterval)).toISOString()
-      
-      console.log(`Updating next check for channel ${channel.name} to: ${nextCheckTime}`)
-
-      const { error: updateError } = await supabase
-        .from('content_monitoring_queue')
-        .update({
-          last_checked_at: new Date().toISOString(),
-          next_check_at: nextCheckTime
-        })
-        .eq('id', queueItem.id)
-
-      if (updateError) {
-        console.error(`Error updating monitoring queue for channel ${channel.id}:`, updateError)
-      } else {
-        console.log(`✅ Updated monitoring queue for channel ${channel.name}`)
-      }
-
       channelsProcessed++
     }
 
     const summary = {
       success: true, 
       channelsChecked: channelsProcessed,
-      totalChannelsFound: channelsToCheck?.length || 0,
+      totalChannelsFound: activeChannels?.length || 0,
       timestamp: new Date().toISOString()
     }
 
@@ -192,10 +162,3 @@ serve(async (req) => {
     })
   }
 })
-
-function getIntervalMs(interval: string): number {
-  const [amount, unit] = interval.split(' ')
-  const multiplier = unit.includes('hour') ? 3600000 : 
-                    unit.includes('minute') ? 60000 : 86400000
-  return parseInt(amount) * multiplier
-}
