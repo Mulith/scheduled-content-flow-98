@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoStyleSelector } from "./VideoStyleSelector";
+import { VoiceSelectorWithPreview } from "./VoiceSelectorWithPreview";
 
 interface ContentChannel {
   id: string;
@@ -105,6 +106,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
   const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [selectedVideoStyles, setSelectedVideoStyles] = useState<string[]>([]);
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     platform: "",
     accountName: "",
@@ -503,7 +505,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                 </div>
               </div>
 
-              {/* Video Styles - Now using VideoStyleSelector */}
+              {/* Video Styles */}
               <div className="space-y-2">
                 <VideoStyleSelector 
                   selectedVideoTypes={selectedVideoStyles}
@@ -511,25 +513,13 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                 />
               </div>
 
-              {/* Voice Selection */}
-              <div className="space-y-2">
-                <Label htmlFor="voice">AI Voice</Label>
-                <Select value={formData.voice} onValueChange={(value) => setFormData({...formData, voice: value})}>
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Select voice" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    {availableVoices.map((voice) => (
-                      <SelectItem key={voice.id} value={voice.id} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                        <div className="flex items-center justify-between w-full">
-                          <span>{voice.name}</span>
-                          {voice.type === "premium" && <span className="text-yellow-400">👑</span>}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Voice Selection with Preview */}
+              <VoiceSelectorWithPreview 
+                selectedVoice={formData.voice}
+                onVoiceSelect={(voiceId) => setFormData({...formData, voice: voiceId})}
+                playingVoice={playingVoice}
+                onVoicePreview={setPlayingVoice}
+              />
 
               {/* Enhanced Schedule Selection with Pricing */}
               <div className="space-y-2">

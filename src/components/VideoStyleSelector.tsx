@@ -19,6 +19,11 @@ const videoStyleOptions = [
 ];
 
 export const VideoStyleSelector = ({ selectedVideoTypes, onVideoTypeToggle }: VideoStyleSelectorProps) => {
+  const handleCheckboxChange = (styleId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    onVideoTypeToggle(styleId);
+  };
+
   return (
     <div className="space-y-3">
       <div>
@@ -46,6 +51,7 @@ export const VideoStyleSelector = ({ selectedVideoTypes, onVideoTypeToggle }: Vi
                     <Checkbox 
                       checked={isSelected}
                       onCheckedChange={() => onVideoTypeToggle(style.id)}
+                      onClick={(e) => handleCheckboxChange(style.id, e)}
                       className={`${
                         isSelected 
                           ? "data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500" 
