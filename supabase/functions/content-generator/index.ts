@@ -196,7 +196,7 @@ async function generateContentWithGemini(
   }
 
   const prompt = `
-You are a content creator specializing in creating engaging short-form video content. Create a video script under 30 seconds.
+You are a content creator specializing in creating engaging short-form video content. Create a video script under 8 seconds total.
 
 Channel Details:
 - Video Types: ${videoTypes}
@@ -204,26 +204,27 @@ Channel Details:
 
 Avoid these previously used topics: ${usedTopics.slice(-20).join(', ')}
 
-Requirements:
+CRITICAL REQUIREMENTS:
 1. Create an engaging, attention-grabbing title
-2. Write a complete script with natural speech patterns that can be delivered in under 30 seconds
-3. Break the script into 2-4 scenes with specific visual descriptions
-4. Include precise timing for each scene (total duration should be 20-30 seconds)
-5. Extract 3-5 topic keywords for the content
-6. Make content engaging, actionable, and valuable to viewers
-7. Ensure scenes flow naturally and timing adds up to the total duration
+2. Write a complete script with natural speech patterns that can be delivered in under 8 seconds
+3. Break the script into 1-2 scenes ONLY with specific visual descriptions
+4. EACH SCENE MUST BE MAXIMUM 8 SECONDS (this is a hard technical limit)
+5. Total video duration should be 6-8 seconds maximum
+6. Extract 2-3 topic keywords for the content
+7. Make content engaging, actionable, and valuable to viewers
+8. Ensure scenes flow naturally and timing adds up to the total duration
 
 Return your response as valid JSON in this exact format:
 {
   "title": "Video Title",
   "script": "Complete video script...",
-  "duration_seconds": 25,
-  "topic_keywords": ["keyword1", "keyword2", "keyword3"],
+  "duration_seconds": 7,
+  "topic_keywords": ["keyword1", "keyword2"],
   "scenes": [
     {
       "scene_number": 1,
       "start_time_seconds": 0,
-      "end_time_seconds": 8,
+      "end_time_seconds": 7,
       "visual_description": "Detailed description of what should be shown visually",
       "narration_text": "Exact text to be spoken during this scene"
     }
@@ -282,17 +283,17 @@ Return your response as valid JSON in this exact format:
 }
 
 function getDurationFromSchedule(schedule: string): number {
-  // Set all durations to under 30 seconds by default
+  // Set all durations to 8 seconds or less to comply with Veo 3 limits
   switch (schedule) {
     case 'twice-daily':
-      return 20 // Shorter for frequent posting
+      return 6 // Shorter for frequent posting
     case 'daily':
-      return 25 // Standard short-form content
+      return 7 // Standard short-form content
     case 'weekly':
-      return 30 // Slightly longer for weekly content
+      return 8 // Maximum allowed by Veo 3
     case 'monthly':
-      return 30 // Consistent with weekly
+      return 8 // Maximum allowed by Veo 3
     default:
-      return 25
+      return 7
   }
 }
