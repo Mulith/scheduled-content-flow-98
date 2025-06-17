@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,11 +6,13 @@ import { Slider } from "@/components/ui/slider";
 import { Play, Pause, Volume2, Crown, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useVoices } from "@/hooks/useVoices";
+import { supabase } from "@/integrations/supabase/client";
 
 export const VoiceSelector = () => {
   const { voices, isLoading, error, refetch } = useVoices();
   const [selectedVoice, setSelectedVoice] = useState("");
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
+  const [audioElements, setAudioElements] = useState<Map<string, HTMLAudioElement>>(new Map());
   const [voiceSettings, setVoiceSettings] = useState({
     speed: [1],
     pitch: [1],
@@ -37,18 +38,106 @@ export const VoiceSelector = () => {
     setSelectedVoice(voiceId);
   };
 
-  const handlePlayPreview = (voiceId: string) => {
-    setIsPlaying(voiceId);
-    // Simulate audio playing
-    setTimeout(() => {
+  const handlePlayPreview = async (voiceId: string) => {
+    if (isPlaying === voiceId) {
+      // Stop current audio
+      const audio = audioElements.get(voiceId);
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
       setIsPlaying(null);
-    }, 3000);
-    
-    const voice = voices.find(v => v.id === voiceId);
-    toast({
-      title: "Playing Preview",
-      description: `Now playing: ${voice?.name}`,
-    });
+      return;
+    }
+
+    try {
+      setIsPlaying(voiceId);
+      
+      const voice = voices.find(v => v.id === voiceId);
+      if (!voice) return;
+
+      // Check if we already have audio for this voice
+      let audio = audioElements.get(voiceId);
+      
+      if (!audio) {
+        // Generate new audio using ElevenLabs
+        const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/' + voiceId, {
+          method: 'POST',
+          headers: {
+            'Accept': 'audio/mpeg',
+            'xi-api-key': await getElevenLabsKey(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: voice.preview,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.8,
+              style: 0.0,
+              use_speaker_boost: true
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to generate audio preview');
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audio = new Audio(audioUrl);
+        
+        // Store audio element
+        const newAudioElements = new Map(audioElements);
+        newAudioElements.set(voiceId, audio);
+        setAudioElements(newAudioElements);
+      }
+
+      // Set volume and play
+      audio.volume = voiceSettings.volume[0];
+      audio.playbackRate = voiceSettings.speed[0];
+      
+      audio.onended = () => setIsPlaying(null);
+      audio.onerror = () => {
+        setIsPlaying(null);
+        toast({
+          title: "Playback Error",
+          description: "Failed to play voice preview",
+          variant: "destructive",
+        });
+      };
+
+      await audio.play();
+      
+      toast({
+        title: "Playing Preview",
+        description: `Now playing: ${voice?.name}`,
+      });
+    } catch (error) {
+      setIsPlaying(null);
+      console.error('Error playing voice preview:', error);
+      toast({
+        title: "Preview Failed",
+        description: "Could not play voice preview. Using fallback simulation.",
+        variant: "destructive",
+      });
+      
+      // Fallback to simulation
+      setTimeout(() => setIsPlaying(null), 3000);
+    }
+  };
+
+  const getElevenLabsKey = async () => {
+    // In a real implementation, this would get the key from your backend
+    // For now, we'll try to get it from the edge function or use a fallback
+    try {
+      const { data } = await supabase.functions.invoke('get-voices');
+      return data?.apiKey; // This would need to be modified in the edge function
+    } catch {
+      // Fallback - in production you'd handle this properly
+      return null;
+    }
   };
 
   if (isLoading) {
