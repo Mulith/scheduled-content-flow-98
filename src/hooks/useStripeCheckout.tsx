@@ -6,12 +6,27 @@ import { toast } from '@/hooks/use-toast';
 export const useStripeCheckout = () => {
   const [isLoading, setIsLoading] = useState(false);
 
-  const createCheckoutSession = async (schedule: string, channelName: string) => {
+  const createCheckoutSession = async (
+    schedule: string, 
+    channelName: string,
+    channelData?: {
+      selectedVideoTypes: string[];
+      selectedVoice: string;
+      topicMode: string;
+      selectedTopics: string[];
+      platform: string;
+      accountName: string;
+    }
+  ) => {
     try {
       setIsLoading(true);
       
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { schedule, channelName }
+        body: { 
+          schedule, 
+          channelName,
+          channelData 
+        }
       });
 
       if (error) {

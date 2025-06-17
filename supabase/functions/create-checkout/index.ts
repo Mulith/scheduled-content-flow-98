@@ -8,13 +8,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Helper logging function for enhanced debugging
+const logStep = (step: string, details?: any) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { schedule, channelName } = await req.json();
+    logStep("Function started");
+
+    const { schedule, channelName, channelData } = await req.json();
+    logStep("Request data received", { schedule, channelName, hasChannelData: !!channelData });
     
     // Get authenticated user
     const supabaseClient = createClient(
@@ -30,6 +39,8 @@ serve(async (req) => {
     if (!user?.email) {
       throw new Error("User not authenticated");
     }
+
+    logStep("User authenticated", { userId: user.id, email: user.email });
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { 
       apiVersion: "2023-10-16" 
@@ -48,11 +59,16 @@ serve(async (req) => {
       throw new Error("Invalid schedule selected");
     }
 
+    logStep("Plan selected", selectedPlan);
+
     // Check if customer exists
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     let customerId;
     if (customers.data.length > 0) {
       customerId = customers.data[0].id;
+      logStep("Existing customer found", { customerId });
+    } else {
+      logStep("No existing customer found");
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -79,16 +95,20 @@ serve(async (req) => {
         channel_name: channelName,
         schedule: schedule,
         user_id: user.id,
+        channel_data: channelData ? JSON.stringify(channelData) : "",
       },
     });
+
+    logStep("Checkout session created", { sessionId: session.id, url: session.url });
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Checkout error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logStep("ERROR", { message: errorMessage });
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

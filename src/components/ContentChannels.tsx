@@ -2,17 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar, DollarSign, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
+import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar, DollarSign } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { VideoStyleSelector } from "./VideoStyleSelector";
 import { VoiceSelectorWithPreview } from "./VoiceSelectorWithPreview";
+import { TopicSelection } from "./TopicSelection";
+import { ChannelCreationForm } from "./ChannelCreationForm";
 
 interface ContentChannel {
   id: string;
@@ -99,21 +98,8 @@ interface ContentChannelsProps {
 export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentChannelsProps) => {
   const [channels, setChannels] = useState<ContentChannel[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [editingChannel, setEditingChannel] = useState<ContentChannel | null>(null);
-  const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
-  const [generatedTopics, setGeneratedTopics] = useState<string[]>([]);
-  const [customTopic, setCustomTopic] = useState("");
   const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
-  const [selectedVideoStyles, setSelectedVideoStyles] = useState<string[]>([]);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    platform: "",
-    accountName: "",
-    voice: "",
-    topic: "",
-    schedule: "",
-  });
 
   const { fetchConnectedChannels } = useYouTubeAuth();
 
@@ -160,171 +146,16 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      platform: "",
-      accountName: "",
-      voice: "",
-      topic: "",
-      schedule: "",
-    });
-    setSelectedVideoStyles([]);
-    setGeneratedTopics([]);
-    setCustomTopic("");
-  };
-
-  const handleVideoStyleToggle = (styleId: string) => {
-    console.log("ContentChannels - Video style toggle:", styleId);
-    setSelectedVideoStyles(prev => {
-      const newSelection = prev.includes(styleId) 
-        ? prev.filter(id => id !== styleId)
-        : [...prev, styleId];
-      console.log("ContentChannels - New video styles:", newSelection);
-      return newSelection;
-    });
-  };
-
-  const generateAITopics = async () => {
-    if (selectedVideoStyles.length === 0) {
-      toast({
-        title: "Select Video Styles First",
-        description: "Please select at least one video style to generate relevant topics",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsGeneratingTopics(true);
-    // Simulate AI generation based on video style
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const topicsByStyle: Record<string, string[]> = {
-      story: [
-        "The story behind overnight success myths",
-        "How one small habit changed everything", 
-        "The real story of productivity experts",
-        "What happened when I tried every morning routine",
-        "The untold story of workplace efficiency"
-      ],
-      top5: [
-        "Top 5 productivity hacks that actually work",
-        "5 morning habits of successful people",
-        "Top 5 time management mistakes to avoid",
-        "5 apps that will transform your workflow",
-        "Top 5 energy boosting techniques"
-      ],
-      bestof: [
-        "Best productivity system of all time",
-        "Ultimate guide to time management",
-        "Best habits for maximum efficiency",
-        "Ultimate workspace setup guide",
-        "Best strategies for deep work"
-      ],
-      howto: [
-        "How to build a perfect morning routine",
-        "How to eliminate distractions forever",
-        "How to double your productivity in 30 days",
-        "How to master time blocking",
-        "How to create focus in a noisy world"
-      ],
-      reaction: [
-        "Reacting to viral productivity advice",
-        "Why productivity gurus are wrong",
-        "My honest review of popular time management",
-        "Reacting to extreme morning routines",
-        "The truth about productivity trends"
-      ],
-      quicktips: [
-        "60-second productivity boost",
-        "Quick energy hack for tired minds",
-        "Instant focus technique",
-        "30-second stress relief method",
-        "Quick win for better time management"
-      ]
-    };
-    
-    // Get topics for all selected video types
-    let aiTopics: string[] = [];
-    selectedVideoStyles.forEach(videoType => {
-      if (topicsByStyle[videoType]) {
-        aiTopics = [...aiTopics, ...topicsByStyle[videoType]];
-      }
-    });
-    
-    // Remove duplicates and limit to 10
-    aiTopics = [...new Set(aiTopics)].slice(0, 10);
-    setGeneratedTopics(aiTopics);
-    setIsGeneratingTopics(false);
-    
+  const handleChannelFormSubmit = (data: {
+    formData: any;
+    selectedVideoStyles: string[];
+  }) => {
+    console.log("Channel creation data:", data);
     toast({
-      title: "Topics Generated! 🎬",
-      description: "AI has suggested topics based on your selected video styles!",
+      title: "Channel Creation Started",
+      description: "Redirecting to Stripe checkout...",
     });
-  };
-
-  const handleCreateChannel = async () => {
-    const needsTopics = selectedVideoStyles.length === 0 || (!formData.topic && generatedTopics.length === 0);
-    
-    console.log("Creating channel with:", {
-      ...formData,
-      selectedVideoStyles,
-    });
-    
-    if (!formData.platform || !formData.accountName || selectedVideoStyles.length === 0 || !formData.voice || !formData.topic || !formData.schedule) {
-      toast({
-        title: "Missing Information",
-        description: "Please fill in all fields and select at least one video style",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsCreating(true);
-
-    try {
-      // For the channel name, use the first selected video style or a combination
-      const primaryStyle = availableVideoStyles.find(s => s.id === selectedVideoStyles[0]);
-      const selectedVoice = availableVoices.find(v => v.id === formData.voice);
-
-      const newChannel: ContentChannel = {
-        id: Date.now().toString(),
-        name: `${formData.accountName} - ${primaryStyle?.name}${selectedVideoStyles.length > 1 ? ' +' + (selectedVideoStyles.length - 1) : ''}`,
-        socialAccount: {
-          platform: formData.platform as "youtube" | "tiktok",
-          accountName: formData.accountName,
-          connected: true,
-        },
-        theme: primaryStyle!,
-        voice: selectedVoice!,
-        topic: formData.topic,
-        schedule: formData.schedule,
-        status: "setup",
-        totalVideos: 0,
-      };
-
-      // Here you would save to your content_channels table
-      // For now, we'll just update local state
-      const updatedChannels = [...channels, newChannel];
-      setChannels(updatedChannels);
-      onChannelsUpdate?.(updatedChannels);
-      
-      setIsCreateDialogOpen(false);
-      resetForm();
-      
-      toast({
-        title: "Skadoosh! 🥋",
-        description: `Channel "${newChannel.name}" has been created successfully!`,
-      });
-    } catch (error) {
-      console.error('Error creating channel:', error);
-      toast({
-        title: "Creation Failed",
-        description: "Failed to create channel. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsCreating(false);
-    }
+    setIsCreateDialogOpen(false);
   };
 
   const handleDeleteChannel = (channelId: string) => {
@@ -367,27 +198,6 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     return schedule ? { label: schedule.label, price: schedule.price } : { label: "Unknown", price: "N/A" };
   };
 
-  const getSelectedSchedulePrice = () => {
-    const selectedSchedule = scheduleOptions.find(s => s.value === formData.schedule);
-    return selectedSchedule ? selectedSchedule.price : "$0/month";
-  };
-
-  const getAvailableAccounts = () => {
-    if (!formData.platform) return [];
-    
-    if (formData.platform === 'youtube') {
-      return connectedYouTubeChannels.map(channel => ({
-        id: channel.channel_id,
-        name: channel.channel_name,
-        handle: channel.channel_handle,
-        thumbnail: channel.thumbnail_url,
-      }));
-    }
-    
-    // TikTok mock data for now
-    return mockTikTokAccounts.map(account => ({ id: account, name: account, handle: account }));
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -402,7 +212,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
               Create Channel
             </Button>
           </DialogTrigger>
-          <DialogContent className="bg-gray-900 border-white/10 text-white max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="bg-gray-900 border-white/10 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Content Channel</DialogTitle>
               <DialogDescription className="text-gray-400">
@@ -410,253 +220,14 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
               </DialogDescription>
             </DialogHeader>
             
-            {/* Subscription Impact Notice */}
-            <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
-              <div className="flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-blue-400 mt-0.5" />
-                <div>
-                  <h4 className="text-blue-400 font-medium">Subscription Impact</h4>
-                  <p className="text-gray-300 text-sm">
-                    Creating a new channel will add to your monthly subscription. Each channel is billed separately based on its posting frequency.
-                  </p>
-                  {formData.schedule && (
-                    <div className="mt-2 p-2 bg-blue-500/20 rounded border border-blue-500/30">
-                      <p className="text-white font-medium">Selected Plan: {getSelectedSchedulePrice()}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {/* Platform and Account Selection */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="platform">Social Platform</Label>
-                  <Select value={formData.platform} onValueChange={(value) => setFormData({...formData, platform: value, accountName: ""})}>
-                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                      <SelectValue placeholder="Select platform" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      <SelectItem value="youtube" className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                        <div className="flex items-center space-x-2">
-                          <Youtube className="w-4 h-4 text-red-500" />
-                          <span>YouTube</span>
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="tiktok" className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                        <div className="flex items-center space-x-2">
-                          <Music className="w-4 h-4 text-pink-500" />
-                          <span>TikTok</span>
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="account">Connected Account</Label>
-                  <Select 
-                    value={formData.accountName} 
-                    onValueChange={(value) => setFormData({...formData, accountName: value})}
-                    disabled={!formData.platform}
-                  >
-                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                      <SelectValue placeholder={formData.platform ? "Select account" : "Choose platform first"} />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      {formData.platform === 'youtube' ? (
-                        connectedYouTubeChannels.length > 0 ? (
-                          connectedYouTubeChannels.map((channel) => (
-                            <SelectItem key={channel.channel_id} value={channel.channel_name} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                              <div className="flex items-center space-x-2">
-                                {channel.thumbnail_url && (
-                                  <img src={channel.thumbnail_url} alt="" className="w-4 h-4 rounded-full" />
-                                )}
-                                <span>{channel.channel_name}</span>
-                                <span className="text-xs text-gray-400">({channel.channel_handle})</span>
-                              </div>
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="no-accounts" disabled className="text-gray-400">
-                            No YouTube channels connected
-                          </SelectItem>
-                        )
-                      ) : (
-                        getAvailableAccounts().map((account) => (
-                          <SelectItem key={account.id} value={account.name} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                            {account.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {formData.platform === 'youtube' && connectedYouTubeChannels.length === 0 && (
-                    <p className="text-xs text-yellow-400">
-                      No YouTube channels connected. Go to Social Accounts to connect your YouTube channel first.
-                    </p>
-                  )}
-                  {formData.platform === 'tiktok' && (
-                    <p className="text-xs text-yellow-400">
-                      TikTok integration coming soon. Connect your TikTok account in Social Accounts.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Video Styles */}
-              <div className="space-y-2">
-                <VideoStyleSelector 
-                  selectedVideoTypes={selectedVideoStyles}
-                  onVideoTypeToggle={handleVideoStyleToggle}
-                />
-              </div>
-
-              {/* Voice Selection with Preview */}
-              <VoiceSelectorWithPreview 
-                selectedVoice={formData.voice}
-                onVoiceSelect={(voiceId) => setFormData({...formData, voice: voiceId})}
-                playingVoice={playingVoice}
-                onVoicePreview={setPlayingVoice}
-              />
-
-              {/* Enhanced Schedule Selection with Pricing */}
-              <div className="space-y-2">
-                <Label htmlFor="schedule" className="flex items-center space-x-2">
-                  <span>Posting Schedule</span>
-                  <DollarSign className="w-4 h-4 text-green-400" />
-                </Label>
-                <Select value={formData.schedule} onValueChange={(value) => setFormData({...formData, schedule: value})}>
-                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                    <SelectValue placeholder="Select schedule & pricing" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-gray-800 border-gray-600">
-                    {scheduleOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                        <div className="flex items-center justify-between w-full">
-                          <div>
-                            <span className="font-medium">{option.label}</span>
-                            <span className="text-gray-400 text-xs ml-2">({option.description})</span>
-                          </div>
-                          <span className="text-green-400 font-medium ml-4">{option.price}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {formData.schedule && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    This will add {getSelectedSchedulePrice()} to your monthly subscription
-                  </div>
-                )}
-              </div>
-
-              {/* Topic Selection */}
-              <div className="space-y-3">
-                <Label>Topic Selection</Label>
-                
-                {/* Topic Categories */}
-                <div className="space-y-2">
-                  <Label className="text-sm text-gray-300">Choose from popular topics:</Label>
-                  <Select value={formData.topic} onValueChange={(value) => setFormData({...formData, topic: value})}>
-                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                      <SelectValue placeholder="Select a topic category" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      {topicCategories.map((topic) => (
-                        <SelectItem key={topic} value={topic} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                          {topic}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* AI Topic Generation */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm text-gray-300">Or get AI-generated topic suggestions:</Label>
-                    <Button 
-                      type="button"
-                      onClick={generateAITopics}
-                      disabled={selectedVideoStyles.length === 0 || isGeneratingTopics}
-                      size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      {isGeneratingTopics ? (
-                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                      ) : (
-                        <Sparkles className="w-4 h-4 mr-2" />
-                      )}
-                      Generate Topics
-                    </Button>
-                  </div>
-                  
-                  {generatedTopics.length > 0 && (
-                    <div className="space-y-2">
-                      {generatedTopics.map((topic, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => setFormData({...formData, topic})}
-                          className={`w-full p-3 text-left rounded-lg border transition-colors ${
-                            formData.topic === topic 
-                              ? "bg-purple-500/20 border-purple-500/50 text-white" 
-                              : "bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700"
-                          }`}
-                        >
-                          {topic}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Custom Topic Input */}
-                <div className="space-y-2">
-                  <Label className="text-sm text-gray-300">Or enter a custom topic:</Label>
-                  <Input
-                    value={customTopic}
-                    onChange={(e) => {
-                      setCustomTopic(e.target.value);
-                      setFormData({...formData, topic: e.target.value});
-                    }}
-                    placeholder="e.g., Morning routines for entrepreneurs"
-                    className="bg-gray-800 border-gray-600 text-white"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Pricing Summary */}
-            {formData.schedule && (
-              <div className="p-4 bg-gradient-to-r from-green-500/10 to-blue-500/10 rounded-lg border border-green-500/20 mt-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="text-white font-medium">Subscription Summary</h4>
-                    <p className="text-gray-400 text-sm">This channel will be added to your billing</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-green-400">{getSelectedSchedulePrice()}</p>
-                    <p className="text-xs text-gray-400">per month</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-white/20 text-white hover:bg-white/10">
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreateChannel} 
-                disabled={isCreating}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {isCreating ? "Creating..." : formData.schedule ? `Create Channel (${getSelectedSchedulePrice()})` : "Create Channel"}
-              </Button>
-            </div>
+            <ChannelCreationForm
+              onClose={() => setIsCreateDialogOpen(false)}
+              onSubmit={handleChannelFormSubmit}
+              isCreating={false}
+              connectedYouTubeChannels={connectedYouTubeChannels}
+              playingVoice={playingVoice}
+              onVoicePreview={setPlayingVoice}
+            />
           </DialogContent>
         </Dialog>
       </div>
