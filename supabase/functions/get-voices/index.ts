@@ -91,13 +91,13 @@ serve(async (req) => {
         preview: "Good day, I'm George. With my deep, authoritative British voice, I'm here to guide you through today's business insights with utmost confidence.",
       },
       {
-        id: "bIHbv24MWmeRgasZH58o", // Will
+        id: "bIHbv24MWmeRgasZH58o", // Will - CORRECTED to American
         name: "Will",
         type: "free",
         description: "Engaging male voice great for storytelling and narratives",
-        accent: "British",
+        accent: "American",
         gender: "male",
-        preview: "Greetings! I'm Will, and I'm absolutely delighted to share stories with you using my engaging British accent. Shall we begin this tale?",
+        preview: "Hey there! I'm Will, and I'm excited to share stories with you using my engaging American accent. Let's dive into this tale!",
       },
       {
         id: "TX3LPaxmHKxFdv7VOQHJ", // Liam
@@ -116,6 +116,15 @@ serve(async (req) => {
         accent: "American",
         gender: "male",
         preview: "Hello! I'm Brian, your educational guide with a professional American accent. I'm excited to help you learn something new today.",
+      },
+      {
+        id: "onwK4e9ZLuTAKqWW03F9", // Daniel - NEW British male voice
+        name: "Daniel",
+        type: "free",
+        description: "Confident male voice perfect for professional presentations",
+        accent: "British",
+        gender: "male",
+        preview: "Good afternoon! I'm Daniel, and I'm delighted to present content with my confident British accent. Shall we begin this presentation?",
       },
     ];
 
@@ -213,9 +222,9 @@ serve(async (req) => {
         name: "Will",
         type: "free",
         description: "Engaging male voice",
-        accent: "British",
+        accent: "American",
         gender: "male",
-        preview: "Greetings! I'm Will with my engaging British accent.",
+        preview: "Hey there! I'm Will with my engaging American accent.",
       },
       {
         id: "TX3LPaxmHKxFdv7VOQHJ",
@@ -234,6 +243,15 @@ serve(async (req) => {
         accent: "American",
         gender: "male",
         preview: "Hello! I'm Brian with my professional American accent.",
+      },
+      {
+        id: "onwK4e9ZLuTAKqWW03F9",
+        name: "Daniel",
+        type: "free",
+        description: "Confident male voice",
+        accent: "British",
+        gender: "male",
+        preview: "Good afternoon! I'm Daniel with my confident British accent.",
       },
     ];
     
