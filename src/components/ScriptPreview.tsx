@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Edit, Download, Clock, Eye, Wand2 } from "lucide-react";
+import { Play, Edit, Download, Clock, Eye, Wand2, Video } from "lucide-react";
+import { ContentStatusProgress } from "@/components/ContentStatusProgress";
 
 interface ContentScene {
   scene_number: number;
@@ -12,6 +13,12 @@ interface ContentScene {
   end_time_seconds: number;
   visual_description: string;
   narration_text: string;
+  content_scene_videos?: {
+    id: string;
+    video_url: string;
+    video_status: string;
+    error_message?: string;
+  }[];
 }
 
 interface ContentItem {
@@ -25,6 +32,12 @@ interface ContentItem {
   script: string;
   duration?: number;
   scenes?: ContentScene[];
+  // New status fields
+  generation_stage?: string;
+  script_status?: string;
+  video_status?: string;
+  music_status?: string;
+  post_status?: string;
 }
 
 interface ScriptPreviewProps {
@@ -68,17 +81,18 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
 
   const scenes = getScenes();
   
-  const formatDuration = (seconds?: number) => {
-    if (!seconds) return "60 seconds";
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return mins > 0 ? `${mins}m ${secs}s` : `${secs} seconds`;
-  };
-
-  const mockStoryboard = scenes.map((scene, index) => ({
-    scene: scene.id,
-    description: `Scene ${scene.id}: ${scene.visual}`
-  }));
+  const mockStoryboard = scenes.map((scene, index) => {
+    const sceneData = contentItem.scenes?.find(s => s.scene_number === scene.id);
+    const sceneVideo = sceneData?.content_scene_videos?.[0];
+    
+    return {
+      scene: scene.id,
+      description: `Scene ${scene.id}: ${scene.visual}`,
+      videoUrl: sceneVideo?.video_url,
+      videoStatus: sceneVideo?.video_status || 'not_started',
+      errorMessage: sceneVideo?.error_message
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -125,6 +139,19 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
             </div>
           </div>
         </CardHeader>
+        
+        {/* Status Progress */}
+        {contentItem.generation_stage && (
+          <CardContent>
+            <ContentStatusProgress
+              generationStage={contentItem.generation_stage}
+              scriptStatus={contentItem.script_status || 'not_started'}
+              videoStatus={contentItem.video_status || 'not_started'}
+              musicStatus={contentItem.music_status || 'not_started'}
+              postStatus={contentItem.post_status || 'not_started'}
+            />
+          </CardContent>
+        )}
       </Card>
 
       {/* Script Content */}
@@ -232,7 +259,7 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
             <CardHeader>
               <CardTitle className="text-white">Visual Storyboard</CardTitle>
               <CardDescription className="text-gray-400">
-                AI-generated visual descriptions for video production
+                AI-generated visual descriptions and video content
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -240,10 +267,55 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
                 {mockStoryboard.map((board, index) => (
                   <Card key={index} className="bg-white/5 border border-white/10">
                     <CardContent className="p-3">
-                      <div className="aspect-video bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-3 flex items-center justify-center">
-                        <span className="text-gray-400 text-sm">Scene {board.scene}</span>
+                      <div className="aspect-video bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
+                        {board.videoUrl && board.videoStatus === 'completed' ? (
+                          <video 
+                            src={board.videoUrl} 
+                            className="w-full h-full object-cover rounded-lg"
+                            controls
+                            muted
+                            preload="metadata"
+                          />
+                        ) : board.videoStatus === 'generating' ? (
+                          <div className="flex flex-col items-center space-y-2">
+                            <Video className="w-6 h-6 text-blue-400 animate-pulse" />
+                            <span className="text-xs text-blue-400">Generating...</span>
+                          </div>
+                        ) : board.videoStatus === 'failed' ? (
+                          <div className="flex flex-col items-center space-y-2">
+                            <Video className="w-6 h-6 text-red-400" />
+                            <span className="text-xs text-red-400">Failed</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Scene {board.scene}</span>
+                        )}
                       </div>
-                      <p className="text-white text-sm">{board.description}</p>
+                      
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium text-white">Scene {board.scene}</span>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs ${
+                            board.videoStatus === 'completed' 
+                              ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                              : board.videoStatus === 'generating'
+                              ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                              : board.videoStatus === 'failed'
+                              ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                              : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                          }`}
+                        >
+                          {board.videoStatus.replace('_', ' ')}
+                        </Badge>
+                      </div>
+                      
+                      <p className="text-white text-xs line-clamp-2">{board.description}</p>
+                      
+                      {board.errorMessage && (
+                        <p className="text-red-400 text-xs mt-1 line-clamp-1" title={board.errorMessage}>
+                          Error: {board.errorMessage}
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 ))}

@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +13,7 @@ export const ContentCalendar = () => {
   const [selectedSchedule, setSelectedSchedule] = useState("");
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null);
 
-  // Fetch real content items from the database
+  // Fetch real content items from the database with new status fields
   const { data: contentItems = [], isLoading, refetch } = useQuery({
     queryKey: ['content-items'],
     queryFn: async () => {
@@ -45,12 +44,18 @@ export const ContentCalendar = () => {
         engagement: getEngagementLevel(item.topic_keywords?.length || 0),
         channel: item.content_channels?.name || 'Unknown Channel',
         script: item.script,
-        duration: item.duration_seconds
+        duration: item.duration_seconds,
+        // Include new status fields
+        generation_stage: item.generation_stage,
+        script_status: item.script_status,
+        video_status: item.video_status,
+        music_status: item.music_status,
+        post_status: item.post_status
       }));
     },
   });
 
-  // Fetch scenes for the selected content item
+  // Fetch scenes for the selected content item with video information
   const { data: selectedContentWithScenes } = useQuery({
     queryKey: ['content-item-with-scenes', selectedIdeaId],
     queryFn: async () => {
@@ -66,11 +71,13 @@ export const ContentCalendar = () => {
             platform
           ),
           content_scenes (
-            scene_number,
-            start_time_seconds,
-            end_time_seconds,
-            visual_description,
-            narration_text
+            *,
+            content_scene_videos (
+              id,
+              video_url,
+              video_status,
+              error_message
+            )
           )
         `)
         .eq('id', selectedIdeaId)
@@ -91,7 +98,13 @@ export const ContentCalendar = () => {
         channel: contentItem.content_channels?.name || 'Unknown Channel',
         script: contentItem.script,
         duration: contentItem.duration_seconds,
-        scenes: contentItem.content_scenes || []
+        scenes: contentItem.content_scenes || [],
+        // Include new status fields
+        generation_stage: contentItem.generation_stage,
+        script_status: contentItem.script_status,
+        video_status: contentItem.video_status,
+        music_status: contentItem.music_status,
+        post_status: contentItem.post_status
       };
     },
     enabled: !!selectedIdeaId,
@@ -124,7 +137,7 @@ export const ContentCalendar = () => {
     setSelectedIdeaId(null);
   };
 
-  // If an idea is selected, show the script preview with real data including scenes
+  // If an idea is selected, show the script preview with real data including scenes and videos
   if (selectedContentWithScenes) {
     return (
       <div className="space-y-6">

@@ -1,12 +1,13 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Wand2, RefreshCw, Trash2 } from "lucide-react";
+import { Wand2, RefreshCw, Trash2, Play } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { ContentStatusProgress } from "@/components/ContentStatusProgress";
+import { useVideoGeneration } from "@/hooks/useVideoGeneration";
 
 interface ContentItem {
   id: string;
@@ -18,6 +19,12 @@ interface ContentItem {
   channel: string;
   script: string;
   duration?: number;
+  // New status fields
+  generation_stage?: string;
+  script_status?: string;
+  video_status?: string;
+  music_status?: string;
+  post_status?: string;
 }
 
 interface ContentIdeasProps {
@@ -30,6 +37,7 @@ interface ContentIdeasProps {
 export const ContentIdeasSection = ({ contentItems, isLoading, onIdeaClick, onRefetch }: ContentIdeasProps) => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { generateVideos, isGenerating } = useVideoGeneration();
 
   const deleteContentItem = useMutation({
     mutationFn: async (contentId: string) => {
@@ -84,6 +92,17 @@ export const ContentIdeasSection = ({ contentItems, isLoading, onIdeaClick, onRe
     e.stopPropagation();
     setDeletingId(contentId);
     deleteContentItem.mutate(contentId);
+  };
+
+  const handleGenerateVideos = (e: React.MouseEvent, contentId: string) => {
+    e.stopPropagation();
+    generateVideos.mutate(contentId);
+  };
+
+  const canGenerateVideos = (item: ContentItem) => {
+    return item.script_status === 'completed' && 
+           item.video_status !== 'completed' && 
+           item.video_status !== 'in_progress';
   };
 
   return (
@@ -147,18 +166,46 @@ export const ContentIdeasSection = ({ contentItems, isLoading, onIdeaClick, onRe
                       {item.scheduledFor}
                     </CardDescription>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
-                    onClick={(e) => handleDelete(e, item.id)}
-                    disabled={deletingId === item.id}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                    {canGenerateVideos(item) && (
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="border-blue-500/30 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/50"
+                        onClick={(e) => handleGenerateVideos(e, item.id)}
+                        disabled={isGenerating}
+                        title="Generate Videos"
+                      >
+                        <Play className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50"
+                      onClick={(e) => handleDelete(e, item.id)}
+                      disabled={deletingId === item.id}
+                      title="Delete Content"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Show progress if we have status information */}
+                {item.generation_stage && (
+                  <div className="mb-4">
+                    <ContentStatusProgress
+                      generationStage={item.generation_stage}
+                      scriptStatus={item.script_status || 'not_started'}
+                      videoStatus={item.video_status || 'not_started'}
+                      musicStatus={item.music_status || 'not_started'}
+                      postStatus={item.post_status || 'not_started'}
+                    />
+                  </div>
+                )}
+                
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Badge 

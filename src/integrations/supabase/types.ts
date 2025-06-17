@@ -121,34 +121,52 @@ export type Database = {
           channel_id: string
           created_at: string
           duration_seconds: number | null
+          generation_stage: string
           id: string
+          music_status: string
+          post_status: string
           script: string
+          script_status: string
           status: string
           title: string
           topic_keywords: string[] | null
           updated_at: string
+          updated_by_system: string | null
+          video_status: string
         }
         Insert: {
           channel_id: string
           created_at?: string
           duration_seconds?: number | null
+          generation_stage?: string
           id?: string
+          music_status?: string
+          post_status?: string
           script: string
+          script_status?: string
           status?: string
           title: string
           topic_keywords?: string[] | null
           updated_at?: string
+          updated_by_system?: string | null
+          video_status?: string
         }
         Update: {
           channel_id?: string
           created_at?: string
           duration_seconds?: number | null
+          generation_stage?: string
           id?: string
+          music_status?: string
+          post_status?: string
           script?: string
+          script_status?: string
           status?: string
           title?: string
           topic_keywords?: string[] | null
           updated_at?: string
+          updated_by_system?: string | null
+          video_status?: string
         }
         Relationships: [
           {
@@ -194,6 +212,47 @@ export type Database = {
             columns: ["channel_id"]
             isOneToOne: true
             referencedRelation: "content_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_scene_videos: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          generation_request_id: string | null
+          id: string
+          scene_id: string
+          video_status: string
+          video_url: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          generation_request_id?: string | null
+          id?: string
+          scene_id: string
+          video_status?: string
+          video_url?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          generation_request_id?: string | null
+          id?: string
+          scene_id?: string
+          video_status?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_scene_videos_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "content_scenes"
             referencedColumns: ["id"]
           },
         ]
