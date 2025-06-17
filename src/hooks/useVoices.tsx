@@ -39,7 +39,7 @@ export const useVoices = () => {
       setError(errorMessage);
       console.error('Error fetching voices:', err);
       
-      // Fallback to all curated voices with real ElevenLabs IDs if API fails
+      // Fallback to all curated voices with real ElevenLabs IDs and accurate previews if API fails
       setVoices([
         // Female voices
         {
@@ -49,7 +49,7 @@ export const useVoices = () => {
           description: "Warm, friendly female voice perfect for lifestyle content",
           accent: "American",
           gender: "female",
-          preview: "Hello! I'm Laura, and I'll be narrating your amazing content today.",
+          preview: "Hi there! I'm Laura, and I'm excited to help you create amazing content today. This is how I sound with my warm American accent.",
         },
         {
           id: "EXAVITQu4vr4xnSDxMaL",
@@ -58,7 +58,7 @@ export const useVoices = () => {
           description: "Professional female voice ideal for educational content",
           accent: "American",
           gender: "female",
-          preview: "Welcome to another episode. I'm Sarah, your guide to knowledge.",
+          preview: "Welcome to this educational session. I'm Sarah, your professional guide with a clear American accent, ready to share knowledge.",
         },
         {
           id: "XrExE9yKIg1WjnnlVkGX",
@@ -67,7 +67,7 @@ export const useVoices = () => {
           description: "Energetic female voice great for motivational content",
           accent: "British",
           gender: "female",
-          preview: "Get ready to transform your life! This is Matilda with your daily motivation.",
+          preview: "Right then! I'm Matilda, and I'm absolutely thrilled to motivate you today with my energetic British accent. Let's get started!",
         },
         {
           id: "aRlmTYIQo6Tlg5SlulGC",
@@ -76,7 +76,7 @@ export const useVoices = () => {
           description: "Clear, articulate female voice perfect for storytelling",
           accent: "American",
           gender: "female",
-          preview: "Welcome everyone! I'm Emma, ready to share incredible stories with you.",
+          preview: "Hello everyone! I'm Emma, and I love telling stories with my clear, articulate American voice. Let me share something wonderful with you.",
         },
         {
           id: "ZF6FPAbjXT4488VcRRnw",
@@ -85,7 +85,7 @@ export const useVoices = () => {
           description: "Elegant female voice ideal for premium content",
           accent: "British",
           gender: "female",
-          preview: "Good day! I'm Grace, here to elevate your listening experience.",
+          preview: "Good afternoon! I'm Grace, speaking with an elegant British accent. I'm delighted to elevate your listening experience today.",
         },
         {
           id: "WzsP0bfiCpSDfNgLrUuN",
@@ -94,7 +94,7 @@ export const useVoices = () => {
           description: "Sophisticated female voice great for business content",
           accent: "American",
           gender: "female",
-          preview: "Hello there! I'm Sophia, your professional content narrator.",
+          preview: "Hello there! I'm Sophia, your sophisticated narrator with a professional American accent. Let's dive into today's business insights.",
         },
         // Male voices
         {
@@ -104,7 +104,7 @@ export const useVoices = () => {
           description: "Versatile male voice perfect for various content types",
           accent: "American",
           gender: "male",
-          preview: "Hi everyone! I'm Charlie, ready to bring your content to life.",
+          preview: "Hey everyone! I'm Charlie, bringing you content with my versatile American voice. I'm ready to adapt to whatever style you need.",
         },
         {
           id: "JBFqnCBsd6RMkjVDRZzb",
@@ -113,7 +113,7 @@ export const useVoices = () => {
           description: "Deep, authoritative male voice perfect for business content",
           accent: "American",
           gender: "male",
-          preview: "Good day, I'm George. Let's dive into today's business insights.",
+          preview: "Good day, I'm George. With my deep, authoritative American voice, I'm here to guide you through today's business insights with confidence.",
         },
         {
           id: "bIHbv24MWmeRgasZH58o",
@@ -122,7 +122,7 @@ export const useVoices = () => {
           description: "Engaging male voice great for storytelling and narratives",
           accent: "British",
           gender: "male",
-          preview: "Welcome, I'm Will. Let me tell you an incredible story.",
+          preview: "Greetings! I'm Will, and I'm delighted to share stories with you using my engaging British accent. Shall we begin this tale?",
         },
         {
           id: "TX3LPaxmHKxFdv7VOQHJ",
@@ -131,7 +131,7 @@ export const useVoices = () => {
           description: "Friendly male voice ideal for tutorials and how-to content",
           accent: "American",
           gender: "male",
-          preview: "Hey there! I'm Liam, and I'll walk you through this step by step.",
+          preview: "Hey there! I'm Liam, and I'll walk you through everything step by step with my friendly American accent. Let's learn together!",
         },
         {
           id: "nPczCjzI2devNBz1zQrb",
@@ -140,7 +140,7 @@ export const useVoices = () => {
           description: "Professional male voice excellent for educational content",
           accent: "American",
           gender: "male",
-          preview: "Hello! I'm Brian, your guide to learning something new today.",
+          preview: "Hello! I'm Brian, your educational guide with a professional American accent. I'm excited to help you learn something new today.",
         },
       ]);
       

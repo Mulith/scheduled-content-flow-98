@@ -14,7 +14,7 @@ serve(async (req) => {
   try {
     const apiKey = Deno.env.get("ELEVENLABS_API_KEY");
     
-    // Your curated list of voices with real ElevenLabs IDs
+    // Your curated list of voices with real ElevenLabs IDs and accurate previews
     const curatedVoices = [
       // Female voices
       {
@@ -24,7 +24,7 @@ serve(async (req) => {
         description: "Warm, friendly female voice perfect for lifestyle content",
         accent: "American",
         gender: "female",
-        preview: "Hello! I'm Laura, and I'll be narrating your amazing content today.",
+        preview: "Hi there! I'm Laura, and I'm excited to help you create amazing content today. This is how I sound with my warm American accent.",
       },
       {
         id: "EXAVITQu4vr4xnSDxMaL", // Sarah
@@ -33,7 +33,7 @@ serve(async (req) => {
         description: "Professional female voice ideal for educational content",
         accent: "American",
         gender: "female",
-        preview: "Welcome to another episode. I'm Sarah, your guide to knowledge.",
+        preview: "Welcome to this educational session. I'm Sarah, your professional guide with a clear American accent, ready to share knowledge.",
       },
       {
         id: "XrExE9yKIg1WjnnlVkGX", // Matilda
@@ -42,7 +42,7 @@ serve(async (req) => {
         description: "Energetic female voice great for motivational content",
         accent: "British",
         gender: "female",
-        preview: "Get ready to transform your life! This is Matilda with your daily motivation.",
+        preview: "Right then! I'm Matilda, and I'm absolutely thrilled to motivate you today with my energetic British accent. Let's get started!",
       },
       {
         id: "aRlmTYIQo6Tlg5SlulGC", // Emma
@@ -51,7 +51,7 @@ serve(async (req) => {
         description: "Clear, articulate female voice perfect for storytelling",
         accent: "American",
         gender: "female",
-        preview: "Welcome everyone! I'm Emma, ready to share incredible stories with you.",
+        preview: "Hello everyone! I'm Emma, and I love telling stories with my clear, articulate American voice. Let me share something wonderful with you.",
       },
       {
         id: "ZF6FPAbjXT4488VcRRnw", // Grace
@@ -60,7 +60,7 @@ serve(async (req) => {
         description: "Elegant female voice ideal for premium content",
         accent: "British",
         gender: "female",
-        preview: "Good day! I'm Grace, here to elevate your listening experience.",
+        preview: "Good afternoon! I'm Grace, speaking with an elegant British accent. I'm delighted to elevate your listening experience today.",
       },
       {
         id: "WzsP0bfiCpSDfNgLrUuN", // Sophia
@@ -69,7 +69,7 @@ serve(async (req) => {
         description: "Sophisticated female voice great for business content",
         accent: "American",
         gender: "female",
-        preview: "Hello there! I'm Sophia, your professional content narrator.",
+        preview: "Hello there! I'm Sophia, your sophisticated narrator with a professional American accent. Let's dive into today's business insights.",
       },
       // Male voices
       {
@@ -79,7 +79,7 @@ serve(async (req) => {
         description: "Versatile male voice perfect for various content types",
         accent: "American",
         gender: "male",
-        preview: "Hi everyone! I'm Charlie, ready to bring your content to life.",
+        preview: "Hey everyone! I'm Charlie, bringing you content with my versatile American voice. I'm ready to adapt to whatever style you need.",
       },
       {
         id: "JBFqnCBsd6RMkjVDRZzb", // George
@@ -88,7 +88,7 @@ serve(async (req) => {
         description: "Deep, authoritative male voice perfect for business content",
         accent: "American",
         gender: "male",
-        preview: "Good day, I'm George. Let's dive into today's business insights.",
+        preview: "Good day, I'm George. With my deep, authoritative American voice, I'm here to guide you through today's business insights with confidence.",
       },
       {
         id: "bIHbv24MWmeRgasZH58o", // Will
@@ -97,7 +97,7 @@ serve(async (req) => {
         description: "Engaging male voice great for storytelling and narratives",
         accent: "British",
         gender: "male",
-        preview: "Welcome, I'm Will. Let me tell you an incredible story.",
+        preview: "Greetings! I'm Will, and I'm delighted to share stories with you using my engaging British accent. Shall we begin this tale?",
       },
       {
         id: "TX3LPaxmHKxFdv7VOQHJ", // Liam
@@ -106,7 +106,7 @@ serve(async (req) => {
         description: "Friendly male voice ideal for tutorials and how-to content",
         accent: "American",
         gender: "male",
-        preview: "Hey there! I'm Liam, and I'll walk you through this step by step.",
+        preview: "Hey there! I'm Liam, and I'll walk you through everything step by step with my friendly American accent. Let's learn together!",
       },
       {
         id: "nPczCjzI2devNBz1zQrb", // Brian
@@ -115,7 +115,7 @@ serve(async (req) => {
         description: "Professional male voice excellent for educational content",
         accent: "American",
         gender: "male",
-        preview: "Hello! I'm Brian, your guide to learning something new today.",
+        preview: "Hello! I'm Brian, your educational guide with a professional American accent. I'm excited to help you learn something new today.",
       },
     ];
 
@@ -134,7 +134,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Error fetching voices:", error);
     
-    // Fallback voices with the same real ElevenLabs IDs
+    // Fallback voices with the same real ElevenLabs IDs and accurate previews
     const fallbackVoices = [
       {
         id: "FGY2WhTYpPnrIDTdsKH5",
@@ -143,7 +143,7 @@ serve(async (req) => {
         description: "Warm, friendly female voice",
         accent: "American",
         gender: "female",
-        preview: "Hello! I'm Laura, ready to help you today.",
+        preview: "Hi there! I'm Laura with my warm American accent.",
       },
       {
         id: "EXAVITQu4vr4xnSDxMaL",
@@ -152,7 +152,7 @@ serve(async (req) => {
         description: "Professional female voice",
         accent: "American",
         gender: "female",
-        preview: "Welcome! I'm Sarah, your guide to success.",
+        preview: "Welcome! I'm Sarah with my professional American voice.",
       },
       {
         id: "XrExE9yKIg1WjnnlVkGX",
@@ -161,7 +161,7 @@ serve(async (req) => {
         description: "Energetic female voice",
         accent: "British",
         gender: "female",
-        preview: "Get ready! This is Matilda with your motivation.",
+        preview: "Right then! I'm Matilda with my energetic British accent.",
       },
       {
         id: "aRlmTYIQo6Tlg5SlulGC",
@@ -170,7 +170,7 @@ serve(async (req) => {
         description: "Clear, articulate female voice",
         accent: "American",
         gender: "female",
-        preview: "Welcome! I'm Emma, ready to share stories.",
+        preview: "Hello! I'm Emma with my clear American voice.",
       },
       {
         id: "ZF6FPAbjXT4488VcRRnw",
@@ -179,7 +179,7 @@ serve(async (req) => {
         description: "Elegant female voice",
         accent: "British",
         gender: "female",
-        preview: "Good day! I'm Grace, here to help.",
+        preview: "Good afternoon! I'm Grace with my elegant British accent.",
       },
       {
         id: "WzsP0bfiCpSDfNgLrUuN",
@@ -188,7 +188,7 @@ serve(async (req) => {
         description: "Sophisticated female voice",
         accent: "American",
         gender: "female",
-        preview: "Hello! I'm Sophia, your narrator.",
+        preview: "Hello! I'm Sophia with my sophisticated American accent.",
       },
       {
         id: "IKne3meq5aSn9XLyUdCD",
@@ -197,7 +197,7 @@ serve(async (req) => {
         description: "Versatile male voice",
         accent: "American",
         gender: "male",
-        preview: "Hi! I'm Charlie, ready to help.",
+        preview: "Hey everyone! I'm Charlie with my versatile American voice.",
       },
       {
         id: "JBFqnCBsd6RMkjVDRZzb",
@@ -206,7 +206,7 @@ serve(async (req) => {
         description: "Deep, authoritative male voice",
         accent: "American",
         gender: "male",
-        preview: "Good day, I'm George. Let's explore insights.",
+        preview: "Good day, I'm George with my deep American voice.",
       },
       {
         id: "bIHbv24MWmeRgasZH58o",
@@ -215,7 +215,7 @@ serve(async (req) => {
         description: "Engaging male voice",
         accent: "British",
         gender: "male",
-        preview: "Welcome, I'm Will. Let me share a story.",
+        preview: "Greetings! I'm Will with my engaging British accent.",
       },
       {
         id: "TX3LPaxmHKxFdv7VOQHJ",
@@ -224,7 +224,7 @@ serve(async (req) => {
         description: "Friendly male voice",
         accent: "American",
         gender: "male",
-        preview: "Hey there! I'm Liam, ready to guide you.",
+        preview: "Hey there! I'm Liam with my friendly American accent.",
       },
       {
         id: "nPczCjzI2devNBz1zQrb",
@@ -233,7 +233,7 @@ serve(async (req) => {
         description: "Professional male voice",
         accent: "American",
         gender: "male",
-        preview: "Hello! I'm Brian, your guide to learning.",
+        preview: "Hello! I'm Brian with my professional American accent.",
       },
     ];
     
