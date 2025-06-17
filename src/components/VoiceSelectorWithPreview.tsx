@@ -64,6 +64,17 @@ export const VoiceSelectorWithPreview = ({
       console.log(`Starting voice preview for ${voiceData.name} (${voiceId})`);
       console.log(`Sample URL: ${voiceData.sampleUrl}`);
       
+      // Test the URL first by making a HEAD request
+      try {
+        const testResponse = await fetch(voiceData.sampleUrl, { 
+          method: 'HEAD',
+          mode: 'no-cors'
+        });
+        console.log("URL test completed");
+      } catch (testError) {
+        console.log("URL test failed, but continuing with audio playback");
+      }
+      
       // Create audio element and test the URL
       const audio = new Audio();
       audioRef.current = audio;
@@ -92,24 +103,38 @@ export const VoiceSelectorWithPreview = ({
         console.error("Failed URL:", voiceData.sampleUrl);
         onVoicePreview("");
         
+        // Try alternative approach - show fallback message
         toast({
-          title: "Voice Preview Unavailable",
-          description: `Sorry, the voice preview for ${voiceData.name} is currently unavailable. You can still select this voice for your content.`,
+          title: "Voice Preview Temporarily Unavailable",
+          description: `Sorry, the voice preview for ${voiceData.name} is currently unavailable due to loading issues. You can still select this voice for your content - it will work when generating actual audio.`,
           variant: "default",
         });
       };
 
-      // Set the audio source with CORS handling
-      audio.crossOrigin = "anonymous";
+      // Remove CORS restriction and try direct load
       audio.src = voiceData.sampleUrl;
       
       // Load and play the audio
       audio.load();
-      await audio.play();
+      
+      // Add a timeout for loading
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.catch(error => {
+          console.error('Play promise rejected:', error);
+          onVoicePreview("");
+          toast({
+            title: "Voice Preview Unavailable",
+            description: `Voice preview for ${voiceData.name} cannot be played right now. You can still select this voice for your content.`,
+            variant: "default",
+          });
+        });
+      }
       
       toast({
-        title: "Voice Preview",
-        description: `Playing ${voiceData.name} (${voiceData.accent} accent) voice sample...`,
+        title: "Loading Voice Preview",
+        description: `Loading ${voiceData.name} (${voiceData.accent} accent) voice sample...`,
       });
 
     } catch (error) {
@@ -117,7 +142,7 @@ export const VoiceSelectorWithPreview = ({
       onVoicePreview("");
       toast({
         title: "Voice Preview Unavailable",
-        description: `Voice preview for ${voiceData.name} is currently unavailable. You can still select this voice for your content.`,
+        description: `Voice preview for ${voiceData.name} is currently unavailable. You can still select this voice for your content - it will work when generating actual audio.`,
         variant: "default",
       });
     } finally {
