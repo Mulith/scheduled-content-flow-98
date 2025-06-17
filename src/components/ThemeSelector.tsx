@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sparkles, TrendingUp, Heart, Lightbulb, Target, Zap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -141,17 +142,11 @@ export const ThemeSelector = () => {
                             </Badge>
                           </div>
                         </div>
-                        <div className={`w-5 h-5 rounded-full border-2 ${
-                          selectedThemes.includes(theme.id)
-                            ? "bg-white border-white"
-                            : "border-gray-400"
-                        }`}>
-                          {selectedThemes.includes(theme.id) && (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                            </div>
-                          )}
-                        </div>
+                        <Checkbox 
+                          checked={selectedThemes.includes(theme.id)}
+                          onChange={() => {}}
+                          className="data-[state=checked]:bg-blue-500"
+                        />
                       </div>
                       <p className="text-gray-300 text-sm mb-3">{theme.description}</p>
                       <div className="space-y-1">
@@ -194,9 +189,11 @@ export const ThemeSelector = () => {
                       className="p-3 bg-white/5 border border-white/10 rounded-lg flex items-center justify-between cursor-pointer hover:bg-white/10"
                     >
                       <span className="text-white">{theme}</span>
-                      <Button size="sm" variant="outline" className="border-white/20 text-white hover:bg-white/10">
-                        Select
-                      </Button>
+                      <Checkbox 
+                        checked={false}
+                        onChange={() => {}}
+                        className="data-[state=checked]:bg-blue-500"
+                      />
                     </div>
                   ))}
                 </div>

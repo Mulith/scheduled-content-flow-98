@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, CreditCard, Loader2, X, Sparkles, RefreshCw } from "lucide-react";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { useVoices } from "@/hooks/useVoices";
@@ -17,6 +19,7 @@ export const ChannelCreation = () => {
   const [selectedSchedule, setSelectedSchedule] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("");
   const [selectedVideoTypes, setSelectedVideoTypes] = useState<string[]>([]);
+  const [topicSelection, setTopicSelection] = useState("ai-decide");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [customTopic, setCustomTopic] = useState("");
   const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
@@ -162,10 +165,12 @@ export const ChannelCreation = () => {
   };
 
   const handleCreateChannel = async () => {
-    if (!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || selectedTopics.length === 0) {
+    const needsTopics = topicSelection !== "ai-decide" && selectedTopics.length === 0;
+    
+    if (!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || needsTopics) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all fields and select at least one video type and topic",
+        description: "Please fill in all fields and select at least one video type" + (needsTopics ? " and topic" : ""),
         variant: "destructive",
       });
       return;
@@ -314,66 +319,52 @@ export const ChannelCreation = () => {
             )}
           </div>
 
-          {/* Topics Selection - Multiple Selection */}
+          {/* Topics Selection with Radio Options */}
           <div className="space-y-4">
-            <Label className="text-white">Content Topics (Select Multiple for Variety)</Label>
+            <Label className="text-white">Content Topics</Label>
             
-            {/* Predefined Topics */}
-            <div className="space-y-2">
-              <Label className="text-sm text-gray-300">Popular Topics:</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {topicCategories.map((topic) => (
-                  <Card
-                    key={topic}
-                    className={`cursor-pointer transition-all p-3 ${
-                      selectedTopics.includes(topic)
-                        ? "bg-purple-600/20 border-purple-500"
-                        : "bg-white/5 border-white/10 hover:bg-white/10"
-                    }`}
-                    onClick={() => handleTopicToggle(topic)}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-white text-sm">{topic}</span>
-                      <Checkbox 
-                        checked={selectedTopics.includes(topic)}
-                        onChange={() => {}}
-                        className="data-[state=checked]:bg-purple-500"
-                      />
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            {/* AI Topic Generation */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm text-gray-300">AI-generated topic suggestions:</Label>
-                <Button 
-                  type="button"
-                  onClick={generateAITopics}
-                  disabled={selectedVideoTypes.length === 0 || isGeneratingTopics}
-                  size="sm"
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  {isGeneratingTopics ? (
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Sparkles className="w-4 h-4 mr-2" />
-                  )}
-                  Generate Topics
-                </Button>
+            <RadioGroup value={topicSelection} onValueChange={setTopicSelection} className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ai-decide" id="ai-decide" />
+                <Label htmlFor="ai-decide" className="text-white cursor-pointer">
+                  Let AI decide (Recommended) - AI will choose optimal topics based on trends
+                </Label>
               </div>
               
-              {generatedTopics.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {generatedTopics.map((topic, index) => (
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="predefined" id="predefined" />
+                <Label htmlFor="predefined" className="text-white cursor-pointer">
+                  Choose from predefined topics
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ai-generated" id="ai-generated" />
+                <Label htmlFor="ai-generated" className="text-white cursor-pointer">
+                  AI-generated topics based on video types
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom" id="custom" />
+                <Label htmlFor="custom" className="text-white cursor-pointer">
+                  Add custom topics
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {/* Predefined Topics */}
+            {topicSelection === "predefined" && (
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-300">Popular Topics:</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {topicCategories.map((topic) => (
                     <Card
-                      key={index}
+                      key={topic}
                       className={`cursor-pointer transition-all p-3 ${
                         selectedTopics.includes(topic)
                           ? "bg-purple-600/20 border-purple-500"
-                          : "bg-gray-800 border-gray-600 hover:bg-gray-700"
+                          : "bg-white/5 border-white/10 hover:bg-white/10"
                       }`}
                       onClick={() => handleTopicToggle(topic)}
                     >
@@ -388,34 +379,84 @@ export const ChannelCreation = () => {
                     </Card>
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {/* AI Topic Generation */}
+            {topicSelection === "ai-generated" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-gray-300">AI-generated topic suggestions:</Label>
+                  <Button 
+                    type="button"
+                    onClick={generateAITopics}
+                    disabled={selectedVideoTypes.length === 0 || isGeneratingTopics}
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {isGeneratingTopics ? (
+                      <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-2" />
+                    )}
+                    Generate Topics
+                  </Button>
+                </div>
+                
+                {generatedTopics.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {generatedTopics.map((topic, index) => (
+                      <Card
+                        key={index}
+                        className={`cursor-pointer transition-all p-3 ${
+                          selectedTopics.includes(topic)
+                            ? "bg-purple-600/20 border-purple-500"
+                            : "bg-gray-800 border-gray-600 hover:bg-gray-700"
+                        }`}
+                        onClick={() => handleTopicToggle(topic)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-white text-sm">{topic}</span>
+                          <Checkbox 
+                            checked={selectedTopics.includes(topic)}
+                            onChange={() => {}}
+                            className="data-[state=checked]:bg-purple-500"
+                          />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Custom Topic Input */}
-            <div className="space-y-2">
-              <Label className="text-sm text-gray-300">Add custom topic:</Label>
-              <div className="flex space-x-2">
-                <Input
-                  value={customTopic}
-                  onChange={(e) => setCustomTopic(e.target.value)}
-                  placeholder="e.g., Morning routines for entrepreneurs"
-                  className="bg-gray-800 border-gray-600 text-white"
-                  onKeyPress={(e) => e.key === 'Enter' && addCustomTopic()}
-                />
-                <Button 
-                  type="button"
-                  onClick={addCustomTopic}
-                  disabled={!customTopic.trim()}
-                  size="sm"
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
+            {topicSelection === "custom" && (
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-300">Add custom topics:</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    value={customTopic}
+                    onChange={(e) => setCustomTopic(e.target.value)}
+                    placeholder="e.g., Morning routines for entrepreneurs"
+                    className="bg-gray-800 border-gray-600 text-white"
+                    onKeyPress={(e) => e.key === 'Enter' && addCustomTopic()}
+                  />
+                  <Button 
+                    type="button"
+                    onClick={addCustomTopic}
+                    disabled={!customTopic.trim()}
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Selected Topics Display */}
-            {selectedTopics.length > 0 && (
+            {(topicSelection !== "ai-decide" && selectedTopics.length > 0) && (
               <div className="space-y-2">
                 <Label className="text-sm text-gray-300">Selected Topics ({selectedTopics.length}):</Label>
                 <div className="flex flex-wrap gap-2">
@@ -435,7 +476,7 @@ export const ChannelCreation = () => {
           </div>
 
           {/* Summary */}
-          {channelName && selectedSchedule && selectedVoice && selectedVideoTypes.length > 0 && selectedTopics.length > 0 && (
+          {channelName && selectedSchedule && selectedVoice && selectedVideoTypes.length > 0 && (
             <Card className="bg-white/5 border-white/10">
               <CardContent className="p-4">
                 <h4 className="text-white font-medium mb-3">Channel Summary</h4>
@@ -462,24 +503,28 @@ export const ChannelCreation = () => {
                     </div>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Topics:</span>
-                    <span className="text-white">{selectedTopics.length} topics selected</span>
+                    <span className="text-gray-400">Topic Selection:</span>
+                    <span className="text-white">
+                      {topicSelection === "ai-decide" ? "AI Decides" : `${selectedTopics.length} topics selected`}
+                    </span>
                   </div>
-                  <div className="space-y-1">
-                    <span className="text-gray-400 text-sm">Selected Topics:</span>
-                    <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
-                      {selectedTopics.slice(0, 6).map((topic) => (
-                        <Badge key={topic} className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
-                          {topic.length > 20 ? topic.substring(0, 20) + '...' : topic}
-                        </Badge>
-                      ))}
-                      {selectedTopics.length > 6 && (
-                        <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-xs">
-                          +{selectedTopics.length - 6} more
-                        </Badge>
-                      )}
+                  {topicSelection !== "ai-decide" && selectedTopics.length > 0 && (
+                    <div className="space-y-1">
+                      <span className="text-gray-400 text-sm">Selected Topics:</span>
+                      <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                        {selectedTopics.slice(0, 6).map((topic) => (
+                          <Badge key={topic} className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-xs">
+                            {topic.length > 20 ? topic.substring(0, 20) + '...' : topic}
+                          </Badge>
+                        ))}
+                        {selectedTopics.length > 6 && (
+                          <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-xs">
+                            +{selectedTopics.length - 6} more
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-gray-400">Schedule:</span>
                     <span className="text-white">{selectedScheduleData?.label}</span>
@@ -500,7 +545,7 @@ export const ChannelCreation = () => {
           {/* Create Channel Button */}
           <Button
             onClick={handleCreateChannel}
-            disabled={!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || selectedTopics.length === 0 || checkoutLoading}
+            disabled={!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || (topicSelection !== "ai-decide" && selectedTopics.length === 0) || checkoutLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           >
             {checkoutLoading ? (
