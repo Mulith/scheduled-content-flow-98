@@ -195,8 +195,11 @@ async function generateContentWithGemini(
       break;
   }
 
+  // Get duration based on schedule - longer durations for better content
+  const targetDuration = getDurationFromSchedule(channel.schedule);
+
   const prompt = `
-You are a content creator specializing in creating engaging short-form video content. Create a video script under 8 seconds total.
+You are a content creator specializing in creating engaging short-form video content. Create a video script for exactly ${targetDuration} seconds.
 
 Channel Details:
 - Video Types: ${videoTypes}
@@ -206,27 +209,47 @@ Avoid these previously used topics: ${usedTopics.slice(-20).join(', ')}
 
 CRITICAL REQUIREMENTS:
 1. Create an engaging, attention-grabbing title
-2. Write a complete script with natural speech patterns that can be delivered in under 8 seconds
-3. Break the script into 1-2 scenes ONLY with specific visual descriptions
-4. EACH SCENE MUST BE MAXIMUM 8 SECONDS (this is a hard technical limit)
-5. Total video duration should be 6-8 seconds maximum
+2. Write a complete script that naturally fits ${targetDuration} seconds of speech
+3. Break the script into 3-5 scenes with natural transitions
+4. Each scene should be 6-12 seconds long for natural pacing
+5. TOTAL duration must equal ${targetDuration} seconds exactly
 6. Extract 2-3 topic keywords for the content
 7. Make content engaging, actionable, and valuable to viewers
-8. Ensure scenes flow naturally and timing adds up to the total duration
+
+VISUAL DESCRIPTION REQUIREMENTS:
+- Be extremely detailed and specific for each scene
+- Include camera angles, lighting, composition, colors
+- Describe facial expressions, gestures, and body language
+- Mention specific props, backgrounds, or settings
+- Include movement and action descriptions
+- Consider text overlays, graphics, or visual effects
+- Be cinematic and visually compelling
+
+TIMING REQUIREMENTS:
+- Scene timing must add up to exactly ${targetDuration} seconds
+- No scene should be shorter than 6 seconds or longer than 12 seconds
+- Ensure natural speech pacing (about 150-180 words per minute)
 
 Return your response as valid JSON in this exact format:
 {
   "title": "Video Title",
   "script": "Complete video script...",
-  "duration_seconds": 7,
+  "duration_seconds": ${targetDuration},
   "topic_keywords": ["keyword1", "keyword2"],
   "scenes": [
     {
       "scene_number": 1,
       "start_time_seconds": 0,
-      "end_time_seconds": 7,
-      "visual_description": "Detailed description of what should be shown visually",
-      "narration_text": "Exact text to be spoken during this scene"
+      "end_time_seconds": 8,
+      "visual_description": "Extreme close-up of confident speaker's face, warm golden hour lighting from the left, sharp focus on eyes with slight background blur. Speaker has a genuine smile, making direct eye contact with camera. Modern minimalist office background with subtle plants. Camera slowly zooms in during speech. Text overlay appears: 'Morning Routine Hack #1'",
+      "narration_text": "Here's the one morning habit that changed everything for me..."
+    },
+    {
+      "scene_number": 2,
+      "start_time_seconds": 8,
+      "end_time_seconds": 16,
+      "visual_description": "Medium shot of speaker demonstrating the habit, natural daylight streaming through large windows. Speaker moves with purpose and energy, hands gesturing expressively. Clean, organized space with motivational elements visible. Camera follows the movement with smooth tracking. Subtle motion graphics highlight key actions.",
+      "narration_text": "Instead of checking my phone first thing, I do this simple 5-minute routine..."
     }
   ]
 }
@@ -242,8 +265,8 @@ Return your response as valid JSON in this exact format:
         parts: [{ text: prompt }]
       }],
       generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 2048,
+        temperature: 0.8,
+        maxOutputTokens: 4096,
       }
     })
   })
@@ -273,6 +296,9 @@ Return your response as valid JSON in this exact format:
       throw new Error('Invalid content structure returned from Gemini')
     }
 
+    // Ensure duration is correct
+    content.duration_seconds = targetDuration;
+
     return content as GeneratedContent
 
   } catch (parseError) {
@@ -283,17 +309,17 @@ Return your response as valid JSON in this exact format:
 }
 
 function getDurationFromSchedule(schedule: string): number {
-  // Set all durations to 8 seconds or less to comply with Veo 3 limits
+  // Updated durations for better, more natural content
   switch (schedule) {
     case 'twice-daily':
-      return 6 // Shorter for frequent posting
+      return 20 // Shorter for frequent posting
     case 'daily':
-      return 7 // Standard short-form content
+      return 30 // Standard short-form content
     case 'weekly':
-      return 8 // Maximum allowed by Veo 3
+      return 45 // Longer for less frequent but higher quality
     case 'monthly':
-      return 8 // Maximum allowed by Veo 3
+      return 60 // Maximum for premium content
     default:
-      return 7
+      return 30
   }
 }

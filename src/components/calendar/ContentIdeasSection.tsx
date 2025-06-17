@@ -1,8 +1,11 @@
 
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlayCircle, Clock, Edit, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Wand2, RefreshCw, Trash2 } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 interface ContentItem {
@@ -13,191 +16,181 @@ interface ContentItem {
   status: string;
   engagement: string;
   channel: string;
-  script?: string;
+  script: string;
   duration?: number;
 }
 
-interface ContentIdeasSectionProps {
+interface ContentIdeasProps {
   contentItems: ContentItem[];
   isLoading: boolean;
   onIdeaClick: (ideaId: string) => void;
   onRefetch: () => void;
 }
 
-export const ContentIdeasSection = ({ 
-  contentItems, 
-  isLoading, 
-  onIdeaClick, 
-  onRefetch 
-}: ContentIdeasSectionProps) => {
-  const generateMoreIdeas = async () => {
-    try {
-      const response = await fetch('/api/content-generator', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          trigger: 'manual'
-        })
-      });
+export const ContentIdeasSection = ({ contentItems, isLoading, onIdeaClick, onRefetch }: ContentIdeasProps) => {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-      if (!response.ok) {
-        throw new Error('Failed to trigger content generation');
+  const deleteContentItem = useMutation({
+    mutationFn: async (contentId: string) => {
+      console.log('🗑️ Deleting content item:', contentId);
+      
+      // First delete scenes
+      const { error: scenesError } = await supabase
+        .from('content_scenes')
+        .delete()
+        .eq('content_item_id', contentId);
+
+      if (scenesError) {
+        console.error('Error deleting scenes:', scenesError);
+        throw new Error(`Failed to delete scenes: ${scenesError.message}`);
       }
 
-      toast({
-        title: "Content Generation Started",
-        description: "New content ideas are being generated in the background!",
-      });
+      // Then delete the content item
+      const { error: contentError } = await supabase
+        .from('content_items')
+        .delete()
+        .eq('id', contentId);
 
-      setTimeout(() => {
-        onRefetch();
-      }, 2000);
-    } catch (error) {
-      console.error('Error generating content:', error);
+      if (contentError) {
+        console.error('Error deleting content item:', contentError);
+        throw new Error(`Failed to delete content item: ${contentError.message}`);
+      }
+
+      console.log('✅ Content item deleted successfully');
+      return contentId;
+    },
+    onSuccess: () => {
       toast({
-        title: "Error",
-        description: "Failed to generate new content ideas",
+        title: "Content Deleted",
+        description: "Content item has been successfully deleted.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['content-items'] });
+      onRefetch();
+      setDeletingId(null);
+    },
+    onError: (error: Error) => {
+      console.error('💥 Error deleting content:', error);
+      toast({
+        title: "Delete Failed",
+        description: error.message || "Failed to delete content item",
         variant: "destructive",
       });
-    }
-  };
+      setDeletingId(null);
+    },
+  });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "draft": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
-      case "generating": return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30";
-      case "published": return "bg-green-500/20 text-green-400 border-green-500/30";
-      case "scheduled": return "bg-purple-500/20 text-purple-400 border-purple-500/30";
-      default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
-    }
-  };
-
-  const getEngagementColor = (engagement: string) => {
-    switch (engagement) {
-      case "Very High": return "text-red-400";
-      case "High": return "text-orange-400";
-      case "Medium": return "text-yellow-400";
-      default: return "text-gray-400";
-    }
-  };
-
-  const getStatusDisplayText = (status: string) => {
-    switch (status) {
-      case "draft": return "Script Ready";
-      case "generating": return "Generating...";
-      case "published": return "Published";
-      case "scheduled": return "Scheduled";
-      default: return status;
-    }
+  const handleDelete = (e: React.MouseEvent, contentId: string) => {
+    e.stopPropagation();
+    setDeletingId(contentId);
+    deleteContentItem.mutate(contentId);
   };
 
   return (
-    <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-white flex items-center">
-              <PlayCircle className="w-5 h-5 mr-2" />
-              AI-Generated Content Ideas
-            </CardTitle>
-            <CardDescription className="text-gray-400">
-              Based on your selected themes and trending topics. Click on any idea to view its script.
-            </CardDescription>
-          </div>
-          <Button 
-            onClick={generateMoreIdeas}
-            variant="outline" 
-            className="border-white/20 text-white hover:bg-white/10"
-            disabled={isLoading}
-          >
-            {isLoading ? "Loading..." : "Generate More Ideas"}
-          </Button>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-semibold text-white">Content Ideas</h3>
+          <p className="text-gray-400 text-sm">AI-generated content ready for production</p>
         </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-gray-400">Loading content ideas...</div>
-          </div>
-        ) : contentItems.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-400 mb-4">No content ideas generated yet</p>
-            <Button 
-              onClick={generateMoreIdeas}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+        <Button 
+          onClick={onRefetch}
+          variant="outline" 
+          className="border-white/20 text-white hover:bg-white/10"
+          disabled={isLoading}
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="bg-white/5 border border-white/10 animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                <div className="h-3 bg-white/10 rounded w-1/2"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="h-3 bg-white/10 rounded"></div>
+                  <div className="h-3 bg-white/10 rounded w-2/3"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : contentItems.length === 0 ? (
+        <Card className="bg-white/5 border border-white/10">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Wand2 className="w-12 h-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-white mb-2">No Content Yet</h3>
+            <p className="text-gray-400 text-center mb-4">
+              Your AI content generator will create engaging videos based on your channel settings.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {contentItems.map((item) => (
+            <Card 
+              key={item.id} 
+              className="bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer group"
+              onClick={() => onIdeaClick(item.id)}
             >
-              Generate Your First Ideas
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {contentItems.map((idea) => (
-              <div 
-                key={idea.id} 
-                className="p-4 bg-white/5 border border-white/10 rounded-lg cursor-pointer hover:bg-white/10 transition-colors"
-                onClick={() => onIdeaClick(idea.id)}
-              >
+              <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h4 className="text-white font-medium mb-2 hover:text-blue-400 transition-colors">{idea.title}</h4>
-                    <div className="flex items-center space-x-4 text-sm">
-                      <div className="flex items-center">
-                        <Badge variant="outline" className="border-purple-500/30 text-purple-400">
-                          {idea.theme}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center text-gray-400">
-                        <Clock className="w-4 h-4 mr-1" />
-                        {idea.scheduledFor}
-                      </div>
-                      <div className={`flex items-center ${getEngagementColor(idea.engagement)}`}>
-                        <span className="text-xs font-medium">
-                          {idea.engagement} Engagement
-                        </span>
-                      </div>
-                      {idea.duration && (
-                        <div className="flex items-center text-gray-400">
-                          <span className="text-xs">
-                            {Math.floor(idea.duration / 60)}:{(idea.duration % 60).toString().padStart(2, '0')}
-                          </span>
-                        </div>
-                      )}
-                    </div>
+                    <CardTitle className="text-white text-lg line-clamp-2">{item.title}</CardTitle>
+                    <CardDescription className="text-gray-400 mt-1">
+                      {item.scheduledFor}
+                    </CardDescription>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <Badge className={getStatusColor(idea.status)}>
-                      {getStatusDisplayText(idea.status)}
-                    </Badge>
-                    <div className="flex items-center space-x-2">
-                      <Button 
-                        size="sm" 
-                        variant="ghost" 
-                        className="text-gray-400 hover:text-white"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          // Edit functionality here
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Eye className="w-4 h-4 text-blue-400" />
-                    </div>
-                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
+                    onClick={(e) => handleDelete(e, item.id)}
+                    disabled={deletingId === item.id}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
-                
-                {idea.status === "draft" && (
-                  <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-                    <p className="text-blue-400 text-sm font-medium">Ready for production!</p>
-                    <p className="text-gray-300 text-sm">Script generated • Storyboard created • Voice selected</p>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Badge 
+                      variant="outline" 
+                      className={`border-${
+                        item.status === 'ready' ? 'green' : 
+                        item.status === 'processing' ? 'yellow' : 'gray'
+                      }-500/30 text-${
+                        item.status === 'ready' ? 'green' : 
+                        item.status === 'processing' ? 'yellow' : 'gray'
+                      }-400`}
+                    >
+                      {item.status}
+                    </Badge>
+                    <Badge variant="outline" className="border-blue-500/30 text-blue-400">
+                      {item.engagement} engagement
+                    </Badge>
                   </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  {item.duration && (
+                    <span className="text-xs text-gray-400">
+                      {item.duration}s
+                    </span>
+                  )}
+                </div>
+                <p className="text-gray-300 text-sm mt-2 line-clamp-2">
+                  {item.script.substring(0, 100)}...
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
