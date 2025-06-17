@@ -11,6 +11,7 @@ import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target,
 import { toast } from "@/hooks/use-toast";
 import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { VideoStyleSelector } from "./VideoStyleSelector";
 
 interface ContentChannel {
   id: string;
@@ -103,10 +104,10 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
   const [customTopic, setCustomTopic] = useState("");
   const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedVideoStyles, setSelectedVideoStyles] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     platform: "",
     accountName: "",
-    videoStyle: "",
     voice: "",
     topic: "",
     schedule: "",
@@ -161,16 +162,36 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     setFormData({
       platform: "",
       accountName: "",
-      videoStyle: "",
       voice: "",
       topic: "",
       schedule: "",
     });
+    setSelectedVideoStyles([]);
     setGeneratedTopics([]);
     setCustomTopic("");
   };
 
+  const handleVideoStyleToggle = (styleId: string) => {
+    console.log("ContentChannels - Video style toggle:", styleId);
+    setSelectedVideoStyles(prev => {
+      const newSelection = prev.includes(styleId) 
+        ? prev.filter(id => id !== styleId)
+        : [...prev, styleId];
+      console.log("ContentChannels - New video styles:", newSelection);
+      return newSelection;
+    });
+  };
+
   const generateAITopics = async () => {
+    if (selectedVideoStyles.length === 0) {
+      toast({
+        title: "Select Video Styles First",
+        description: "Please select at least one video style to generate relevant topics",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGeneratingTopics(true);
     // Simulate AI generation based on video style
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -220,21 +241,37 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
       ]
     };
     
-    const aiTopics = topicsByStyle[formData.videoStyle] || topicsByStyle.quicktips;
+    // Get topics for all selected video types
+    let aiTopics: string[] = [];
+    selectedVideoStyles.forEach(videoType => {
+      if (topicsByStyle[videoType]) {
+        aiTopics = [...aiTopics, ...topicsByStyle[videoType]];
+      }
+    });
+    
+    // Remove duplicates and limit to 10
+    aiTopics = [...new Set(aiTopics)].slice(0, 10);
     setGeneratedTopics(aiTopics);
     setIsGeneratingTopics(false);
     
     toast({
       title: "Topics Generated! 🎬",
-      description: "AI has suggested topics based on your video style selection!",
+      description: "AI has suggested topics based on your selected video styles!",
     });
   };
 
   const handleCreateChannel = async () => {
-    if (!formData.platform || !formData.accountName || !formData.videoStyle || !formData.voice || !formData.topic || !formData.schedule) {
+    const needsTopics = selectedVideoStyles.length === 0 || (!formData.topic && generatedTopics.length === 0);
+    
+    console.log("Creating channel with:", {
+      ...formData,
+      selectedVideoStyles,
+    });
+    
+    if (!formData.platform || !formData.accountName || selectedVideoStyles.length === 0 || !formData.voice || !formData.topic || !formData.schedule) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all fields and select at least one video style",
         variant: "destructive",
       });
       return;
@@ -243,18 +280,19 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     setIsCreating(true);
 
     try {
-      const selectedStyle = availableVideoStyles.find(s => s.id === formData.videoStyle);
+      // For the channel name, use the first selected video style or a combination
+      const primaryStyle = availableVideoStyles.find(s => s.id === selectedVideoStyles[0]);
       const selectedVoice = availableVoices.find(v => v.id === formData.voice);
 
       const newChannel: ContentChannel = {
         id: Date.now().toString(),
-        name: `${formData.accountName} - ${selectedStyle?.name}`,
+        name: `${formData.accountName} - ${primaryStyle?.name}${selectedVideoStyles.length > 1 ? ' +' + (selectedVideoStyles.length - 1) : ''}`,
         socialAccount: {
           platform: formData.platform as "youtube" | "tiktok",
           accountName: formData.accountName,
           connected: true,
         },
-        theme: selectedStyle!,
+        theme: primaryStyle!,
         voice: selectedVoice!,
         topic: formData.topic,
         schedule: formData.schedule,
@@ -366,7 +404,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
             <DialogHeader>
               <DialogTitle>Create New Content Channel</DialogTitle>
               <DialogDescription className="text-gray-400">
-                Set up a new channel with its own video style, voice, and topic configuration
+                Set up a new channel with its own video styles, voice, and topic configuration
               </DialogDescription>
             </DialogHeader>
             
@@ -465,45 +503,32 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                 </div>
               </div>
 
-              {/* Video Style and Voice */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="videoStyle">Video Style</Label>
-                  <Select value={formData.videoStyle} onValueChange={(value) => setFormData({...formData, videoStyle: value})}>
-                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                      <SelectValue placeholder="Select video style" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      {availableVideoStyles.map((style) => (
-                        <SelectItem key={style.id} value={style.id} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                          <div>
-                            <div className="font-medium">{style.name}</div>
-                            <div className="text-xs text-gray-400">{style.description}</div>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="voice">AI Voice</Label>
-                  <Select value={formData.voice} onValueChange={(value) => setFormData({...formData, voice: value})}>
-                    <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
-                      <SelectValue placeholder="Select voice" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-gray-800 border-gray-600">
-                      {availableVoices.map((voice) => (
-                        <SelectItem key={voice.id} value={voice.id} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                          <div className="flex items-center justify-between w-full">
-                            <span>{voice.name}</span>
-                            {voice.type === "premium" && <span className="text-yellow-400">👑</span>}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Video Styles - Now using VideoStyleSelector */}
+              <div className="space-y-2">
+                <VideoStyleSelector 
+                  selectedVideoTypes={selectedVideoStyles}
+                  onVideoTypeToggle={handleVideoStyleToggle}
+                />
+              </div>
+
+              {/* Voice Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="voice">AI Voice</Label>
+                <Select value={formData.voice} onValueChange={(value) => setFormData({...formData, voice: value})}>
+                  <SelectTrigger className="bg-gray-800 border-gray-600 text-white">
+                    <SelectValue placeholder="Select voice" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-600">
+                    {availableVoices.map((voice) => (
+                      <SelectItem key={voice.id} value={voice.id} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                        <div className="flex items-center justify-between w-full">
+                          <span>{voice.name}</span>
+                          {voice.type === "premium" && <span className="text-yellow-400">👑</span>}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Enhanced Schedule Selection with Pricing */}
@@ -565,7 +590,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                     <Button 
                       type="button"
                       onClick={generateAITopics}
-                      disabled={!formData.videoStyle || isGeneratingTopics}
+                      disabled={selectedVideoStyles.length === 0 || isGeneratingTopics}
                       size="sm"
                       className="bg-purple-600 hover:bg-purple-700"
                     >
