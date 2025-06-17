@@ -102,6 +102,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
   const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [isCreatingChannel, setIsCreatingChannel] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const { fetchConnectedChannels } = useYouTubeAuth();
   const { createCheckoutSession } = useStripeCheckout();
@@ -118,34 +119,68 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
   const loadExistingChannels = async () => {
     try {
+      setIsLoading(true);
       const { data: user } = await supabase.auth.getUser();
       if (!user.user) return;
 
-      // For now, we'll use mock data but this is where you'd load from your content_channels table
-      // when you create that table structure
-      const mockChannels: ContentChannel[] = [
-        {
-          id: "1",
-          name: "Productivity Tips",
-          socialAccount: {
-            platform: "youtube",
-            accountName: connectedYouTubeChannels[0]?.channel_name || "ProductivityMaster",
-            connected: true,
-          },
-          theme: availableVideoStyles[0],
-          voice: availableVoices[0],
-          topic: "Daily productivity hacks and time management",
-          schedule: "daily",
-          status: "active",
-          lastGenerated: "2 hours ago",
-          totalVideos: 47,
+      console.log('Loading channels for user:', user.user.id);
+
+      // Load channels from database
+      const { data: dbChannels, error } = await supabase
+        .from('content_channels')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading channels:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load your channels",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Loaded channels from database:', dbChannels);
+
+      // Transform database channels to UI format
+      const transformedChannels: ContentChannel[] = (dbChannels || []).map(dbChannel => ({
+        id: dbChannel.id,
+        name: dbChannel.name,
+        socialAccount: {
+          platform: dbChannel.platform as "youtube" | "tiktok",
+          accountName: dbChannel.account_name,
+          connected: true,
         },
-      ];
+        theme: {
+          id: dbChannel.selected_video_types[0] || 'story',
+          name: availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0])?.name || 'Story Format',
+          color: availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0])?.color || 'from-blue-500 to-cyan-500',
+        },
+        voice: {
+          id: dbChannel.selected_voice,
+          name: availableVoices.find(v => v.id === dbChannel.selected_voice)?.name || 'Unknown',
+          type: availableVoices.find(v => v.id === dbChannel.selected_voice)?.type || 'free',
+        },
+        topic: dbChannel.topic_mode === 'ai-decide' ? 'AI-Generated Topics' : `Custom: ${dbChannel.selected_topics.join(', ')}`,
+        schedule: dbChannel.schedule,
+        status: dbChannel.subscription_status as "active" | "paused" | "setup",
+        lastGenerated: "Not yet generated",
+        totalVideos: 0,
+      }));
       
-      setChannels(mockChannels);
-      onChannelsUpdate?.(mockChannels);
+      setChannels(transformedChannels);
+      onChannelsUpdate?.(transformedChannels);
     } catch (error) {
       console.error('Error loading channels:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load your channels",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -237,6 +272,22 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     const schedule = scheduleOptions.find(s => s.value === scheduleValue);
     return schedule ? { label: schedule.label, price: schedule.price } : { label: "Unknown", price: "N/A" };
   };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-white mb-2">Content Channels</h2>
+            <p className="text-gray-400">Loading your channels...</p>
+          </div>
+        </div>
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-8 h-8 text-blue-400 animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

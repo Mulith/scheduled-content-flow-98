@@ -9,6 +9,60 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      content_channels: {
+        Row: {
+          account_name: string
+          created_at: string
+          id: string
+          name: string
+          platform: string
+          schedule: string
+          selected_topics: string[] | null
+          selected_video_types: string[]
+          selected_voice: string
+          stripe_customer_id: string | null
+          stripe_session_id: string | null
+          subscription_status: string | null
+          topic_mode: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_name: string
+          created_at?: string
+          id?: string
+          name: string
+          platform: string
+          schedule: string
+          selected_topics?: string[] | null
+          selected_video_types: string[]
+          selected_voice: string
+          stripe_customer_id?: string | null
+          stripe_session_id?: string | null
+          subscription_status?: string | null
+          topic_mode: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string
+          created_at?: string
+          id?: string
+          name?: string
+          platform?: string
+          schedule?: string
+          selected_topics?: string[] | null
+          selected_video_types?: string[]
+          selected_voice?: string
+          stripe_customer_id?: string | null
+          stripe_session_id?: string | null
+          subscription_status?: string | null
+          topic_mode?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

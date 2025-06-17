@@ -5,12 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Loader2, AlertCircle } from "lucide-react";
 import { SkadooshLogo } from "@/components/SkadooshLogo";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const Success = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Processing your payment...');
+  const [message, setMessage] = useState('Verifying your payment...');
   
   const sessionId = searchParams.get('session_id');
 
@@ -21,14 +23,50 @@ const Success = () => {
       return;
     }
 
-    // Simulate processing for now
-    const timer = setTimeout(() => {
-      setStatus('success');
-      setMessage('Your subscription has been activated successfully!');
-    }, 2000);
-
-    return () => clearTimeout(timer);
+    verifyPaymentAndCreateChannel();
   }, [sessionId]);
+
+  const verifyPaymentAndCreateChannel = async () => {
+    try {
+      console.log('=== VERIFYING PAYMENT ===');
+      console.log('Session ID:', sessionId);
+
+      // Call the edge function to verify payment and create channel
+      const { data, error } = await supabase.functions.invoke('verify-payment-and-create-channel', {
+        body: { sessionId }
+      });
+
+      console.log('Verification response:', { data, error });
+
+      if (error) {
+        console.error('Verification error:', error);
+        throw new Error(error.message || 'Failed to verify payment');
+      }
+
+      if (data.success) {
+        setStatus('success');
+        setMessage('Your subscription has been activated and channel created successfully!');
+        
+        toast({
+          title: "Channel Created!",
+          description: `Your "${data.channel.name}" channel is now active and ready to generate content.`,
+        });
+      } else {
+        throw new Error(data.error || 'Payment verification failed');
+      }
+
+    } catch (error) {
+      console.error('Payment verification failed:', error);
+      setStatus('error');
+      setMessage(error instanceof Error ? error.message : 'Failed to verify payment and create channel');
+      
+      toast({
+        title: "Payment Verification Failed",
+        description: "There was an issue verifying your payment. Please contact support.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleContinue = () => {
     navigate('/app');
@@ -63,7 +101,7 @@ const Success = () => {
                 <CheckCircle className="w-16 h-16 text-green-400" />
               </div>
               <p className="text-gray-300">
-                Your content channel is being set up. You can now start creating AI-powered videos!
+                Your content channel has been created and is ready to start generating AI-powered videos!
               </p>
               <Button 
                 onClick={handleContinue}
@@ -80,7 +118,7 @@ const Success = () => {
                 <AlertCircle className="w-16 h-16 text-red-400" />
               </div>
               <p className="text-gray-300">
-                There was an issue processing your payment. Please try again or contact support.
+                {message}
               </p>
               <div className="flex gap-2">
                 <Button 
