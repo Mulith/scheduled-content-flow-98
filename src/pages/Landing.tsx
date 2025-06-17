@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Video, PlayCircle, Calendar, Settings, Upload, Palette, Mic, CheckCircle, Star, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SkadooshLogo } from "@/components/SkadooshLogo";
+
 const Landing = () => {
   const navigate = useNavigate();
   const features = [{
@@ -49,9 +51,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 md:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Video className="w-5 h-5 text-white" />
-              </div>
+              <SkadooshLogo size="md" />
               <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 ContentAI Studio
               </h1>
@@ -152,9 +152,7 @@ const Landing = () => {
         <div className="container mx-auto px-4 md:px-6 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between">
             <div className="flex items-center space-x-3 mb-4 md:mb-0">
-              <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Video className="w-4 h-4 text-white" />
-              </div>
+              <SkadooshLogo size="sm" />
               <span className="text-white font-semibold">ContentAI Studio</span>
             </div>
             <div className="text-gray-400 text-sm">

@@ -43,6 +43,7 @@ export type Database = {
           channel_id: string
           channel_name: string
           connected_at: string
+          enabled: boolean
           id: string
           refresh_token: string
           subscriber_count: number | null
@@ -58,6 +59,7 @@ export type Database = {
           channel_id: string
           channel_name: string
           connected_at?: string
+          enabled?: boolean
           id?: string
           refresh_token: string
           subscriber_count?: number | null
@@ -73,6 +75,7 @@ export type Database = {
           channel_id?: string
           channel_name?: string
           connected_at?: string
+          enabled?: boolean
           id?: string
           refresh_token?: string
           subscriber_count?: number | null

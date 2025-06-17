@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PlayCircle, Calendar, Palette, Mic, Video, Upload, Settings, Plus, X, Menu, ChevronLeft, ChevronRight, LogOut } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SocialConnections } from "@/components/SocialConnections";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { ContentCalendar } from "@/components/ContentCalendar";
@@ -16,6 +17,7 @@ import { BillingManagement } from "@/components/BillingManagement";
 import { AccountManagement } from "@/components/AccountManagement";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import { SkadooshLogo } from "@/components/SkadooshLogo";
 
 interface ContentChannel {
   id: string;
@@ -185,9 +187,7 @@ const Index = () => {
         <div className="container mx-auto px-4 md:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Video className="w-5 h-5 text-white" />
-              </div>
+              <SkadooshLogo size="md" />
               <h1 className="text-xl md:text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 ContentAI Studio
               </h1>
@@ -229,7 +229,7 @@ const Index = () => {
       </nav>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 md:px-6 py-6 md:py-8">
+      <main className="container mx-auto px-4 md:px-6 py-8">
         {activeTab === "dashboard" && <div className="space-y-6 md:space-y-8">
             {/* Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
