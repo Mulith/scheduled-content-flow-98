@@ -1,65 +1,16 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, Volume2, Crown } from "lucide-react";
+import { Play, Pause, Volume2, Crown, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-
-const voiceOptions = [
-  {
-    id: "aria",
-    name: "Aria",
-    type: "free",
-    description: "Warm, friendly female voice perfect for lifestyle content",
-    accent: "American",
-    preview: "Hello! I'm Aria, and I'll be narrating your amazing content today.",
-  },
-  {
-    id: "marcus",
-    name: "Marcus",
-    type: "free",
-    description: "Professional male voice ideal for business and productivity",
-    accent: "American",
-    preview: "Welcome to another episode. I'm Marcus, your guide to success.",
-  },
-  {
-    id: "sofia",
-    name: "Sofia",
-    type: "free",
-    description: "Energetic female voice great for motivational content",
-    accent: "American",
-    preview: "Get ready to transform your life! This is Sofia with your daily motivation.",
-  },
-  {
-    id: "alexander",
-    name: "Alexander",
-    type: "premium",
-    description: "Deep, authoritative male voice for serious topics",
-    accent: "British",
-    preview: "Good day. I'm Alexander, and today we're exploring fascinating insights.",
-  },
-  {
-    id: "isabella",
-    name: "Isabella",
-    type: "premium",
-    description: "Elegant female voice with sophisticated tone",
-    accent: "British",
-    preview: "Hello there. Isabella here, ready to share some remarkable discoveries with you.",
-  },
-  {
-    id: "james",
-    name: "James",
-    type: "premium",
-    description: "Charismatic male voice perfect for storytelling",
-    accent: "Australian",
-    preview: "G'day! James here, and I've got an incredible story to share with you today.",
-  },
-];
+import { useVoices } from "@/hooks/useVoices";
 
 export const VoiceSelector = () => {
-  const [selectedVoice, setSelectedVoice] = useState("aria");
+  const { voices, isLoading, error, refetch } = useVoices();
+  const [selectedVoice, setSelectedVoice] = useState("");
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
   const [voiceSettings, setVoiceSettings] = useState({
     speed: [1],
@@ -67,8 +18,15 @@ export const VoiceSelector = () => {
     volume: [0.8],
   });
 
+  // Set first voice as default when voices load
+  useEffect(() => {
+    if (voices.length > 0 && !selectedVoice) {
+      setSelectedVoice(voices[0].id);
+    }
+  }, [voices, selectedVoice]);
+
   const handleVoiceSelect = (voiceId: string) => {
-    const voice = voiceOptions.find(v => v.id === voiceId);
+    const voice = voices.find(v => v.id === voiceId);
     if (voice?.type === "premium") {
       toast({
         title: "Premium Voice Selected",
@@ -86,12 +44,31 @@ export const VoiceSelector = () => {
       setIsPlaying(null);
     }, 3000);
     
-    const voice = voiceOptions.find(v => v.id === voiceId);
+    const voice = voices.find(v => v.id === voiceId);
     toast({
       title: "Playing Preview",
       description: `Now playing: ${voice?.name}`,
     });
   };
+
+  if (isLoading) {
+    return (
+      <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-white flex items-center">
+            <Volume2 className="w-5 h-5 mr-2" />
+            Voice Selection
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
+            <span className="ml-2 text-white">Loading voices...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
@@ -99,15 +76,30 @@ export const VoiceSelector = () => {
         <CardTitle className="text-white flex items-center">
           <Volume2 className="w-5 h-5 mr-2" />
           Voice Selection
+          {error && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={refetch}
+              className="ml-auto text-gray-400 hover:text-white"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </Button>
+          )}
         </CardTitle>
         <CardDescription className="text-gray-400">
           Choose the perfect voice for your content narration
+          {error && (
+            <span className="block text-yellow-400 text-sm mt-1">
+              Using fallback voices - click refresh to retry
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Voice Options Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {voiceOptions.map((voice) => (
+          {voices.map((voice) => (
             <Card 
               key={voice.id}
               className={`cursor-pointer transition-all duration-200 ${
@@ -215,7 +207,7 @@ export const VoiceSelector = () => {
         </div>
 
         {/* Premium Upgrade */}
-        {voiceOptions.find(v => v.id === selectedVoice)?.type === "premium" && (
+        {voices.find(v => v.id === selectedVoice)?.type === "premium" && (
           <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
