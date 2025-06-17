@@ -54,8 +54,7 @@ serve(async (req) => {
 
     // Convert audio to base64
     const audioBuffer = await response.arrayBuffer();
-    const uint8Array = new Uint8Array(audioBuffer);
-    const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)));
+    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
 
     console.log(`Successfully generated audio for voice: ${voice_id}`);
 

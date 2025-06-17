@@ -42,82 +42,72 @@ export const VoiceSelectorWithPreview = ({
 
     // Find the voice data
     const voiceData = voices.find(v => v.id === voiceId);
-    if (!voiceData) return;
-
-    let retryCount = 0;
-    const maxRetries = 2;
-
-    const attemptPreview = async (): Promise<void> => {
-      try {
-        setLoadingPreview(voiceId);
-        
-        console.log(`Attempting voice preview for ${voiceData.name} (${voiceId}), attempt ${retryCount + 1}`);
-        
-        // Call ElevenLabs TTS API through our edge function
-        const { data, error } = await supabase.functions.invoke('text-to-speech', {
-          body: {
-            text: voiceData.preview,
-            voice_id: voiceId
-          }
-        });
-
-        if (error) {
-          throw error;
-        }
-
-        // Create audio from base64 data
-        if (data?.audioContent) {
-          const audioBlob = new Blob(
-            [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
-            { type: 'audio/mpeg' }
-          );
-          const audioUrl = URL.createObjectURL(audioBlob);
-          
-          const audio = new Audio(audioUrl);
-          audioRef.current = audio;
-
-          audio.onplay = () => {
-            onVoicePreview(voiceId);
-          };
-
-          audio.onended = () => {
-            onVoicePreview("");
-            URL.revokeObjectURL(audioUrl);
-          };
-
-          audio.onerror = () => {
-            onVoicePreview("");
-            URL.revokeObjectURL(audioUrl);
-            throw new Error("Audio playback failed");
-          };
-
-          await audio.play();
-          
-          toast({
-            title: "Voice Preview",
-            description: `Playing ${voiceData.name} voice sample...`,
-          });
-        } else {
-          throw new Error("No audio content received");
-        }
-      } catch (error) {
-        console.error(`Voice preview attempt ${retryCount + 1} failed:`, error);
-        
-        if (retryCount < maxRetries) {
-          retryCount++;
-          // Wait a brief moment before retrying
-          await new Promise(resolve => setTimeout(resolve, 500));
-          return attemptPreview();
-        } else {
-          throw error;
-        }
-      }
-    };
+    if (!voiceData) {
+      console.error("Voice not found:", voiceId);
+      return;
+    }
 
     try {
-      await attemptPreview();
+      setLoadingPreview(voiceId);
+      
+      console.log(`Starting voice preview for ${voiceData.name} (${voiceId})`);
+      
+      // Call ElevenLabs TTS API through our edge function
+      const { data, error } = await supabase.functions.invoke('text-to-speech', {
+        body: {
+          text: voiceData.preview,
+          voice_id: voiceId
+        }
+      });
+
+      if (error) {
+        console.error("Supabase function error:", error);
+        throw error;
+      }
+
+      if (!data?.audioContent) {
+        throw new Error("No audio content received from API");
+      }
+
+      // Create audio from base64 data
+      const audioBlob = new Blob(
+        [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
+        { type: 'audio/mpeg' }
+      );
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+
+      audio.onplay = () => {
+        onVoicePreview(voiceId);
+      };
+
+      audio.onended = () => {
+        onVoicePreview("");
+        URL.revokeObjectURL(audioUrl);
+      };
+
+      audio.onerror = (e) => {
+        console.error("Audio playback error:", e);
+        onVoicePreview("");
+        URL.revokeObjectURL(audioUrl);
+        toast({
+          title: "Audio Playback Error",
+          description: "Failed to play the audio preview",
+          variant: "destructive",
+        });
+      };
+
+      await audio.play();
+      
+      toast({
+        title: "Voice Preview",
+        description: `Playing ${voiceData.name} voice sample...`,
+      });
+
     } catch (error) {
-      console.error('All voice preview attempts failed:', error);
+      console.error('Voice preview failed:', error);
       toast({
         title: "Voice Preview Error",
         description: "Unable to play voice preview. Please try again.",
