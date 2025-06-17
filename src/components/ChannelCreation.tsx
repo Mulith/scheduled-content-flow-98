@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, CreditCard, Loader2, X, Sparkles, RefreshCw } from "lucide-react";
+import { Plus, CreditCard, Loader2, X, Sparkles, RefreshCw, Play, Pause } from "lucide-react";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
 import { useVoices } from "@/hooks/useVoices";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ export const ChannelCreation = () => {
   const [customTopic, setCustomTopic] = useState("");
   const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
   const [generatedTopics, setGeneratedTopics] = useState<string[]>([]);
+  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   
   const { createCheckoutSession, isLoading: checkoutLoading } = useStripeCheckout();
   const { voices, isLoading: voicesLoading } = useVoices();
@@ -164,6 +165,29 @@ export const ChannelCreation = () => {
     });
   };
 
+  const handleVoicePreview = (voiceId: string) => {
+    if (playingVoice === voiceId) {
+      setPlayingVoice(null);
+      // Stop any playing audio
+      return;
+    }
+
+    setPlayingVoice(voiceId);
+    
+    // Simulate voice preview (replace with actual TTS API call)
+    const utterance = new SpeechSynthesisUtterance("This is a sample of how your content will sound with this voice.");
+    const voice = speechSynthesis.getVoices().find(v => v.name.includes(voiceId)) || speechSynthesis.getVoices()[0];
+    if (voice) utterance.voice = voice;
+    
+    utterance.onend = () => setPlayingVoice(null);
+    speechSynthesis.speak(utterance);
+
+    toast({
+      title: "Voice Preview",
+      description: "Playing voice sample...",
+    });
+  };
+
   const handleCreateChannel = async () => {
     const needsTopics = topicSelection !== "ai-decide" && selectedTopics.length === 0;
     
@@ -215,7 +239,7 @@ export const ChannelCreation = () => {
 
           {/* Video Types Selection - Multiple Selection */}
           <div className="space-y-3">
-            <Label className="text-white">Video Types (Select Multiple for Variety)</Label>
+            <Label className="text-white">Video Styles (Select Multiple for Variety)</Label>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {videoStyleOptions.map((style) => (
                 <Card
@@ -283,7 +307,7 @@ export const ChannelCreation = () => {
             </div>
           </div>
 
-          {/* Voice Selection */}
+          {/* Voice Selection with Preview */}
           <div className="space-y-3">
             <Label className="text-white">AI Voice</Label>
             {voicesLoading ? (
@@ -292,30 +316,60 @@ export const ChannelCreation = () => {
                 <span className="ml-2 text-gray-400">Loading voices...</span>
               </div>
             ) : (
-              <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-                <SelectTrigger className="bg-white/10 border-white/20 text-white">
-                  <SelectValue placeholder="Choose an AI voice" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-900 border-white/20">
-                  {voices.map((voice) => (
-                    <SelectItem key={voice.id} value={voice.id} className="text-white">
-                      <div className="flex items-center space-x-2">
-                        <span>{voice.name}</span>
-                        {voice.type === "premium" && (
-                          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">
-                            Premium
-                          </Badge>
-                        )}
+              <div className="space-y-3">
+                {voices.map((voice) => (
+                  <Card
+                    key={voice.id}
+                    className={`cursor-pointer transition-all ${
+                      selectedVoice === voice.id
+                        ? "bg-purple-600/20 border-purple-500 border-2"
+                        : "bg-white/5 border-white/10 hover:bg-white/10"
+                    }`}
+                    onClick={() => setSelectedVoice(voice.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <h4 className="text-white font-medium flex items-center">
+                              {voice.name}
+                              {voice.type === "premium" && (
+                                <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs ml-2">
+                                  Premium
+                                </Badge>
+                              )}
+                            </h4>
+                            <p className="text-gray-400 text-sm">{voice.description} • {voice.accent} accent</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleVoicePreview(voice.id);
+                            }}
+                            className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+                          >
+                            {playingVoice === voice.id ? (
+                              <Pause className="w-4 h-4" />
+                            ) : (
+                              <Play className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Checkbox 
+                            checked={selectedVoice === voice.id}
+                            onChange={() => {}}
+                            className="data-[state=checked]:bg-purple-500"
+                          />
+                        </div>
                       </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {selectedVoiceData && (
-              <p className="text-gray-400 text-sm">
-                {selectedVoiceData.description} • {selectedVoiceData.accent} accent
-              </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </div>
 
@@ -341,7 +395,7 @@ export const ChannelCreation = () => {
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="ai-generated" id="ai-generated" />
                 <Label htmlFor="ai-generated" className="text-white cursor-pointer">
-                  AI-generated topics based on video types
+                  AI-generated topics based on video styles
                 </Label>
               </div>
               
@@ -486,11 +540,11 @@ export const ChannelCreation = () => {
                     <span className="text-white">{channelName}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Video Types:</span>
-                    <span className="text-white">{selectedVideoTypes.length} types selected</span>
+                    <span className="text-gray-400">Video Styles:</span>
+                    <span className="text-white">{selectedVideoTypes.length} styles selected</span>
                   </div>
                   <div className="space-y-1">
-                    <span className="text-gray-400 text-sm">Selected Types:</span>
+                    <span className="text-gray-400 text-sm">Selected Styles:</span>
                     <div className="flex flex-wrap gap-1">
                       {selectedVideoTypes.map(typeId => {
                         const type = videoStyleOptions.find(s => s.id === typeId);
