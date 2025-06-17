@@ -80,9 +80,9 @@ serve(async (req) => {
         throw new Error('Failed to get access token')
       }
 
-      // Get channel info
+      // Fetch all channels the user has access to (not just mine=true)
       const channelResponse = await fetch(
-        'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&mine=true',
+        'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&managedByMe=true&maxResults=50',
         {
           headers: {
             'Authorization': `Bearer ${tokenData.access_token}`,
@@ -91,45 +91,73 @@ serve(async (req) => {
       )
 
       const channelData = await channelResponse.json()
+      console.log('Channel API response:', channelData)
       
       if (!channelData.items || channelData.items.length === 0) {
-        throw new Error('No YouTube channel found')
+        // Fallback to mine=true if managedByMe doesn't return results
+        console.log('No channels found with managedByMe, trying mine=true')
+        const fallbackResponse = await fetch(
+          'https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,contentDetails&mine=true',
+          {
+            headers: {
+              'Authorization': `Bearer ${tokenData.access_token}`,
+            },
+          }
+        )
+        const fallbackData = await fallbackResponse.json()
+        console.log('Fallback channel API response:', fallbackData)
+        
+        if (!fallbackData.items || fallbackData.items.length === 0) {
+          throw new Error('No YouTube channels found for this account')
+        }
+        channelData.items = fallbackData.items
       }
 
-      const channel = channelData.items[0]
-      
-      // Store or update channel in database
-      const { error } = await supabaseClient
-        .from('youtube_channels')
-        .upsert({
+      // Store all channels in the database
+      const channels = []
+      for (const channel of channelData.items) {
+        const channelRecord = {
           user_id: user.id,
           channel_id: channel.id,
           channel_name: channel.snippet.title,
           channel_handle: channel.snippet.customUrl || `@${channel.snippet.title.replace(/\s+/g, '').toLowerCase()}`,
           thumbnail_url: channel.snippet.thumbnails?.default?.url,
-          subscriber_count: parseInt(channel.statistics.subscriberCount || '0'),
-          video_count: parseInt(channel.statistics.videoCount || '0'),
+          subscriber_count: parseInt(channel.statistics?.subscriberCount || '0'),
+          video_count: parseInt(channel.statistics?.videoCount || '0'),
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
           token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
-        })
+        }
 
-      if (error) {
-        console.error('Database error:', error)
-        throw new Error('Failed to save channel data')
+        const { error } = await supabaseClient
+          .from('youtube_channels')
+          .upsert(channelRecord, {
+            onConflict: 'user_id,channel_id'
+          })
+
+        if (error) {
+          console.error('Database error for channel:', channel.id, error)
+        } else {
+          channels.push({
+            id: channel.id,
+            name: channel.snippet.title,
+            handle: channel.snippet.customUrl || `@${channel.snippet.title.replace(/\s+/g, '').toLowerCase()}`,
+            thumbnail: channel.snippet.thumbnails?.default?.url,
+            subscribers: channel.statistics?.subscriberCount || '0',
+            videos: channel.statistics?.videoCount || '0',
+          })
+        }
+      }
+
+      if (channels.length === 0) {
+        throw new Error('Failed to save any channel data')
       }
 
       return new Response(
         JSON.stringify({ 
           success: true,
-          channel: {
-            id: channel.id,
-            name: channel.snippet.title,
-            handle: channel.snippet.customUrl || `@${channel.snippet.title.replace(/\s+/g, '').toLowerCase()}`,
-            thumbnail: channel.snippet.thumbnails?.default?.url,
-            subscribers: channel.statistics.subscriberCount,
-            videos: channel.statistics.videoCount,
-          }
+          channels: channels,
+          message: `Successfully connected ${channels.length} channel(s)`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )

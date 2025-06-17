@@ -46,11 +46,11 @@ export const useYouTubeAuth = () => {
       if (error) throw error;
 
       toast({
-        title: "YouTube Connected!",
-        description: `Successfully connected ${data.channel.name}`,
+        title: "Skadoosh! 🥋",
+        description: data.message || `Successfully connected ${data.channels?.length || 1} YouTube channel(s)`,
       });
 
-      return data.channel;
+      return data.channels || [];
       
     } catch (error) {
       console.error('OAuth callback error:', error);
