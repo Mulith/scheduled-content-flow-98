@@ -199,14 +199,10 @@ export const ChannelCreation = () => {
             setChannelName={setChannelName}
           />
 
-          <div className="border border-red-500 p-4 rounded">
-            <h3 className="text-red-400 mb-2">DEBUG: Video Style Selector</h3>
-            <p className="text-white text-sm">Current selectedVideoTypes: {JSON.stringify(selectedVideoTypes)}</p>
-            <VideoStyleSelector 
-              selectedVideoTypes={selectedVideoTypes}
-              onVideoTypeToggle={handleVideoTypeToggle}
-            />
-          </div>
+          <VideoStyleSelector 
+            selectedVideoTypes={selectedVideoTypes}
+            onVideoTypeToggle={handleVideoTypeToggle}
+          />
 
           <ScheduleSelector 
             selectedSchedule={selectedSchedule}

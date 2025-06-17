@@ -7,7 +7,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2, Play, Pause } from "lucide-react";
 import { useVoices } from "@/hooks/useVoices";
 import { toast } from "@/hooks/use-toast";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface VoiceSelectorWithPreviewProps {
   selectedVoice: string;
@@ -23,11 +24,15 @@ export const VoiceSelectorWithPreview = ({
   onVoicePreview 
 }: VoiceSelectorWithPreviewProps) => {
   const { voices, isLoading: voicesLoading } = useVoices();
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState<string | null>(null);
 
-  const handleVoicePreview = (voiceId: string) => {
+  const handleVoicePreview = async (voiceId: string) => {
     // Stop any currently playing audio
-    speechSynthesis.cancel();
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     
     if (playingVoice === voiceId) {
       // If clicking the same voice that's playing, stop it
@@ -39,60 +44,68 @@ export const VoiceSelectorWithPreview = ({
     const voiceData = voices.find(v => v.id === voiceId);
     if (!voiceData) return;
 
-    // Create new utterance
-    const utterance = new SpeechSynthesisUtterance(voiceData.preview);
-    utterance.rate = 0.9;
-    utterance.pitch = 1.0;
-    utterance.volume = 0.8;
+    try {
+      setLoadingPreview(voiceId);
+      
+      // Call ElevenLabs TTS API through our edge function
+      const { data, error } = await supabase.functions.invoke('text-to-speech', {
+        body: {
+          text: voiceData.preview,
+          voice_id: voiceId
+        }
+      });
 
-    // Try to match browser voice to our voice name/gender
-    const availableVoices = speechSynthesis.getVoices();
-    let matchedVoice = null;
+      if (error) {
+        throw error;
+      }
 
-    if (voiceData.gender === 'female') {
-      matchedVoice = availableVoices.find(v => 
-        v.name.toLowerCase().includes('female') || 
-        v.name.toLowerCase().includes('woman') ||
-        v.name.toLowerCase().includes(voiceData.name.toLowerCase())
-      ) || availableVoices.find(v => v.name.includes('Samantha') || v.name.includes('Alex'));
-    } else {
-      matchedVoice = availableVoices.find(v => 
-        v.name.toLowerCase().includes('male') || 
-        v.name.toLowerCase().includes('man') ||
-        v.name.toLowerCase().includes(voiceData.name.toLowerCase())
-      ) || availableVoices.find(v => v.name.includes('Daniel') || v.name.includes('Tom'));
-    }
+      // Create audio from base64 data
+      if (data?.audioContent) {
+        const audioBlob = new Blob(
+          [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
+          { type: 'audio/mpeg' }
+        );
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        const audio = new Audio(audioUrl);
+        audioRef.current = audio;
 
-    if (matchedVoice) {
-      utterance.voice = matchedVoice;
-    }
+        audio.onplay = () => {
+          onVoicePreview(voiceId);
+        };
 
-    // Set up event listeners
-    utterance.onstart = () => {
-      onVoicePreview(voiceId);
-    };
+        audio.onended = () => {
+          onVoicePreview("");
+          URL.revokeObjectURL(audioUrl);
+        };
 
-    utterance.onend = () => {
-      onVoicePreview("");
-    };
+        audio.onerror = () => {
+          onVoicePreview("");
+          URL.revokeObjectURL(audioUrl);
+          toast({
+            title: "Voice Preview Error",
+            description: "Unable to play voice preview. Please try again.",
+            variant: "destructive",
+          });
+        };
 
-    utterance.onerror = () => {
-      onVoicePreview("");
+        await audio.play();
+        
+        toast({
+          title: "Voice Preview",
+          description: `Playing ${voiceData.name} voice sample...`,
+        });
+      }
+    } catch (error) {
+      console.error('Error playing voice preview:', error);
       toast({
         title: "Voice Preview Error",
         description: "Unable to play voice preview. Please try again.",
         variant: "destructive",
       });
-    };
-
-    // Store reference and speak
-    utteranceRef.current = utterance;
-    speechSynthesis.speak(utterance);
-
-    toast({
-      title: "Voice Preview",
-      description: `Playing ${voiceData.name} voice sample...`,
-    });
+    } finally {
+      setLoadingPreview(null);
+    }
   };
 
   return (
@@ -148,9 +161,12 @@ export const VoiceSelectorWithPreview = ({
                         e.stopPropagation();
                         handleVoicePreview(voice.id);
                       }}
+                      disabled={loadingPreview === voice.id}
                       className="bg-white/10 border-white/20 text-white hover:bg-white/20"
                     >
-                      {playingVoice === voice.id ? (
+                      {loadingPreview === voice.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : playingVoice === voice.id ? (
                         <Pause className="w-4 h-4" />
                       ) : (
                         <Play className="w-4 h-4" />
