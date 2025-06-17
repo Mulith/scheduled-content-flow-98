@@ -24,6 +24,8 @@ serve(async (req) => {
       throw new Error("ElevenLabs API key not configured");
     }
 
+    console.log(`Generating speech for voice: ${voice_id}`);
+
     // Call ElevenLabs Text-to-Speech API
     const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
       method: "POST",
@@ -47,12 +49,15 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error("ElevenLabs API error:", errorText);
-      throw new Error(`ElevenLabs API error: ${response.status}`);
+      throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
     }
 
     // Convert audio to base64
     const audioBuffer = await response.arrayBuffer();
-    const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+    const uint8Array = new Uint8Array(audioBuffer);
+    const base64Audio = btoa(String.fromCharCode.apply(null, Array.from(uint8Array)));
+
+    console.log(`Successfully generated audio for voice: ${voice_id}`);
 
     return new Response(JSON.stringify({ audioContent: base64Audio }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
