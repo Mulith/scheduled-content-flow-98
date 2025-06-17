@@ -6,82 +6,53 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, Edit, Download, Clock, Eye, Wand2 } from "lucide-react";
 
-const mockScript = {
-  title: "5 Morning Habits That Will Transform Your Day",
-  theme: "Productivity",
-  duration: "60 seconds",
-  scenes: [
-    {
-      id: 1,
-      timestamp: "0:00-0:08",
-      text: "What if I told you that just 5 simple habits could completely transform your entire day?",
-      visual: "Person waking up energetically, stretching in bed with sunlight streaming through window",
-      voiceNote: "Enthusiastic, hook the viewer immediately"
-    },
-    {
-      id: 2,
-      timestamp: "0:08-0:15",
-      text: "Habit number one: Wake up at the same time every day, even on weekends.",
-      visual: "Clock showing consistent wake-up time, person getting out of bed confidently",
-      voiceNote: "Clear and authoritative"
-    },
-    {
-      id: 3,
-      timestamp: "0:15-0:23",
-      text: "Your body craves routine. When you wake up at the same time, you're programming your internal clock for success.",
-      visual: "Animation showing internal body clock, peaceful sleeping and waking cycle",
-      voiceNote: "Educational tone, explaining the science"
-    },
-    {
-      id: 4,
-      timestamp: "0:23-0:30",
-      text: "Habit two: Drink a full glass of water immediately. Your body is dehydrated after 8 hours.",
-      visual: "Person drinking water, refreshing close-up shots, body hydration visualization",
-      voiceNote: "Practical and health-focused"
-    },
-    {
-      id: 5,
-      timestamp: "0:30-0:38",
-      text: "Three: Make your bed. It's your first accomplishment of the day and sets a productive tone.",
-      visual: "Satisfying bed-making sequence, neat organized bedroom",
-      voiceNote: "Motivational and empowering"
-    },
-    {
-      id: 6,
-      timestamp: "0:38-0:45",
-      text: "Four: Write down three things you're grateful for. Gratitude rewires your brain for positivity.",
-      visual: "Hand writing in journal, peaceful morning light, grateful expressions",
-      voiceNote: "Warm and reflective"
-    },
-    {
-      id: 7,
-      timestamp: "0:45-0:52",
-      text: "And five: Move your body for just 5 minutes. A quick walk or stretch energizes your entire system.",
-      visual: "Quick exercise montage, stretching, short walk, energetic movement",
-      voiceNote: "Energetic and encouraging"
-    },
-    {
-      id: 8,
-      timestamp: "0:52-1:00",
-      text: "Try these for just one week. Your future self will thank you. What's your morning routine?",
-      visual: "Success transformation, before/after energy levels, call-to-action text overlay",
-      voiceNote: "Concluding with a question to boost engagement"
-    }
-  ],
-  storyboard: [
-    { scene: 1, description: "Wide shot of bedroom with morning sunlight" },
-    { scene: 2, description: "Close-up of alarm clock, person's feet hitting floor" },
-    { scene: 3, description: "Animation graphics showing circadian rhythm" },
-    { scene: 4, description: "Macro shot of water being poured and consumed" },
-    { scene: 5, description: "Time-lapse of bed being made perfectly" },
-    { scene: 6, description: "Overhead shot of journal with handwriting" },
-    { scene: 7, description: "Quick cuts of various exercises and stretches" },
-    { scene: 8, description: "Split screen showing tired vs energized person" }
-  ]
-};
+interface ContentItem {
+  id: string;
+  title: string;
+  theme: string;
+  scheduledFor: string;
+  status: string;
+  engagement: string;
+  channel: string;
+  script: string;
+  duration?: number;
+}
 
-export const ScriptPreview = () => {
+interface ScriptPreviewProps {
+  contentItem: ContentItem;
+}
+
+export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
   const [selectedScene, setSelectedScene] = useState(1);
+
+  // Parse the script to create scenes (this is a simplified parser)
+  const parseScriptToScenes = (script: string) => {
+    // Split script by paragraphs or sentences to create scenes
+    const sentences = script.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    const sceneDuration = (contentItem.duration || 60) / Math.max(sentences.length, 1);
+    
+    return sentences.map((sentence, index) => ({
+      id: index + 1,
+      timestamp: `${Math.floor(index * sceneDuration / 60)}:${String(Math.floor(index * sceneDuration) % 60).padStart(2, '0')}-${Math.floor((index + 1) * sceneDuration / 60)}:${String(Math.floor((index + 1) * sceneDuration) % 60).padStart(2, '0')}`,
+      text: sentence.trim(),
+      visual: `Visual description for scene ${index + 1}: Supporting imagery for "${sentence.trim().substring(0, 30)}..."`,
+      voiceNote: index === 0 ? "Enthusiastic opening tone" : index === sentences.length - 1 ? "Strong concluding tone" : "Clear and engaging delivery"
+    }));
+  };
+
+  const scenes = parseScriptToScenes(contentItem.script);
+  
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return "60 seconds";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs} seconds`;
+  };
+
+  const mockStoryboard = scenes.map((scene, index) => ({
+    scene: scene.id,
+    description: `Scene ${scene.id}: ${scene.visual}`
+  }));
 
   return (
     <div className="space-y-6">
@@ -95,19 +66,19 @@ export const ScriptPreview = () => {
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-white text-xl">{mockScript.title}</CardTitle>
+              <CardTitle className="text-white text-xl">{contentItem.title}</CardTitle>
               <CardDescription className="text-gray-400 mt-2">
                 <div className="flex items-center space-x-4">
                   <Badge variant="outline" className="border-purple-500/30 text-purple-400">
-                    {mockScript.theme}
+                    {contentItem.theme}
                   </Badge>
                   <span className="flex items-center">
                     <Clock className="w-4 h-4 mr-1" />
-                    {mockScript.duration}
+                    {formatDuration(contentItem.duration)}
                   </span>
                   <span className="flex items-center">
                     <Eye className="w-4 h-4 mr-1" />
-                    {mockScript.scenes.length} scenes
+                    {scenes.length} scenes
                   </span>
                 </div>
               </CardDescription>
@@ -149,7 +120,7 @@ export const ScriptPreview = () => {
             {/* Scene List */}
             <div className="lg:col-span-1 space-y-3">
               <h4 className="text-white font-medium">Scenes</h4>
-              {mockScript.scenes.map((scene) => (
+              {scenes.map((scene) => (
                 <Card 
                   key={scene.id}
                   className={`cursor-pointer transition-all ${
@@ -174,11 +145,11 @@ export const ScriptPreview = () => {
 
             {/* Scene Details */}
             <div className="lg:col-span-2">
-              {mockScript.scenes.find(scene => scene.id === selectedScene) && (
+              {scenes.find(scene => scene.id === selectedScene) && (
                 <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
                   <CardHeader>
                     <CardTitle className="text-white">
-                      Scene {selectedScene} • {mockScript.scenes.find(scene => scene.id === selectedScene)?.timestamp}
+                      Scene {selectedScene} • {scenes.find(scene => scene.id === selectedScene)?.timestamp}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -187,7 +158,7 @@ export const ScriptPreview = () => {
                       <h5 className="text-white font-medium mb-2">Script Text</h5>
                       <div className="p-4 bg-white/5 border border-white/10 rounded-lg">
                         <p className="text-white text-lg leading-relaxed">
-                          {mockScript.scenes.find(scene => scene.id === selectedScene)?.text}
+                          {scenes.find(scene => scene.id === selectedScene)?.text}
                         </p>
                       </div>
                     </div>
@@ -197,7 +168,7 @@ export const ScriptPreview = () => {
                       <h5 className="text-white font-medium mb-2">Visual Description</h5>
                       <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                         <p className="text-purple-200">
-                          {mockScript.scenes.find(scene => scene.id === selectedScene)?.visual}
+                          {scenes.find(scene => scene.id === selectedScene)?.visual}
                         </p>
                       </div>
                     </div>
@@ -207,7 +178,7 @@ export const ScriptPreview = () => {
                       <h5 className="text-white font-medium mb-2">Voice Direction</h5>
                       <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg">
                         <p className="text-blue-200">
-                          {mockScript.scenes.find(scene => scene.id === selectedScene)?.voiceNote}
+                          {scenes.find(scene => scene.id === selectedScene)?.voiceNote}
                         </p>
                       </div>
                     </div>
@@ -240,7 +211,7 @@ export const ScriptPreview = () => {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {mockScript.storyboard.map((board, index) => (
+                {mockStoryboard.map((board, index) => (
                   <Card key={index} className="bg-white/5 border border-white/10">
                     <CardContent className="p-3">
                       <div className="aspect-video bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-3 flex items-center justify-center">
@@ -268,8 +239,8 @@ export const ScriptPreview = () => {
                 {[
                   { step: "Script Analysis", status: "completed", description: "AI analyzed script for timing and content" },
                   { step: "Voice Generation", status: "completed", description: "AI voice narration generated with selected voice" },
-                  { step: "Visual Assets", status: "processing", description: "Requesting video clips from AI models (VEO 3)" },
-                  { step: "Final Assembly", status: "pending", description: "Merging clips, adding overlays and effects" }
+                  { step: "Visual Assets", status: contentItem.status === 'draft' ? "completed" : "processing", description: "Requesting video clips from AI models (VEO 3)" },
+                  { step: "Final Assembly", status: contentItem.status === 'published' ? "completed" : "pending", description: "Merging clips, adding overlays and effects" }
                 ].map((item, index) => (
                   <Card key={index} className="bg-white/5 border border-white/10">
                     <CardContent className="p-4">

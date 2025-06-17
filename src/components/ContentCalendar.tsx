@@ -79,7 +79,7 @@ export const ContentCalendar = () => {
     setSelectedIdeaId(null);
   };
 
-  // If an idea is selected, show the script preview
+  // If an idea is selected, show the script preview with real data
   if (selectedIdea) {
     return (
       <div className="space-y-6">
@@ -102,7 +102,7 @@ export const ContentCalendar = () => {
             </div>
           </div>
         </div>
-        <ScriptPreview />
+        <ScriptPreview contentItem={selectedIdea} />
       </div>
     );
   }
