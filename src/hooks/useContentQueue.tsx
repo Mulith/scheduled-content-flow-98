@@ -45,27 +45,22 @@ export const useContentQueue = () => {
   // Manually trigger content monitoring
   const triggerMonitoring = useMutation({
     mutationFn: async () => {
-      console.log('Triggering content monitoring...');
+      console.log('🔍 Triggering content monitoring via Supabase edge function...');
       
-      try {
-        const { data, error } = await supabase.functions.invoke('content-monitor', {
-          body: {}
-        });
-        
-        if (error) {
-          console.error('Content monitor error details:', error);
-          throw new Error(`Content monitor failed: ${error.message || 'Unknown error'}`);
-        }
-        
-        console.log('Content monitor response:', data);
-        return data;
-      } catch (err) {
-        console.error('Failed to invoke content monitor:', err);
-        throw err;
+      const { data, error } = await supabase.functions.invoke('content-monitor', {
+        body: {}
+      });
+      
+      if (error) {
+        console.error('❌ Content monitor edge function error:', error);
+        throw new Error(`Content monitor failed: ${error.message || 'Unknown error'}`);
       }
+      
+      console.log('✅ Content monitor edge function response:', data);
+      return data;
     },
     onSuccess: (data) => {
-      console.log('Content monitoring triggered successfully:', data);
+      console.log('🎉 Content monitoring completed successfully:', data);
       toast({
         title: "Monitoring Triggered",
         description: `Content monitoring completed. Checked ${data?.channelsChecked || 0} channels.`,
@@ -74,7 +69,7 @@ export const useContentQueue = () => {
       queryClient.invalidateQueries({ queryKey: ['content-monitoring-queue'] });
     },
     onError: (error: Error) => {
-      console.error('Error triggering monitoring:', error);
+      console.error('💥 Error triggering monitoring:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to trigger monitoring",
@@ -86,27 +81,22 @@ export const useContentQueue = () => {
   // Manually trigger content generation
   const triggerGeneration = useMutation({
     mutationFn: async () => {
-      console.log('Triggering content generation...');
+      console.log('🎬 Triggering content generation via Supabase edge function...');
       
-      try {
-        const { data, error } = await supabase.functions.invoke('content-generator', {
-          body: {}
-        });
-        
-        if (error) {
-          console.error('Content generator error details:', error);
-          throw new Error(`Content generator failed: ${error.message || 'Unknown error'}`);
-        }
-        
-        console.log('Content generator response:', data);
-        return data;
-      } catch (err) {
-        console.error('Failed to invoke content generator:', err);
-        throw err;
+      const { data, error } = await supabase.functions.invoke('content-generator', {
+        body: {}
+      });
+      
+      if (error) {
+        console.error('❌ Content generator edge function error:', error);
+        throw new Error(`Content generator failed: ${error.message || 'Unknown error'}`);
       }
+      
+      console.log('✅ Content generator edge function response:', data);
+      return data;
     },
     onSuccess: (data) => {
-      console.log('Content generation triggered successfully:', data);
+      console.log('🎉 Content generation completed successfully:', data);
       toast({
         title: "Generation Triggered",
         description: `Content generation completed. Processed ${data?.processed || 0} requests.`,
@@ -114,7 +104,7 @@ export const useContentQueue = () => {
       queryClient.invalidateQueries({ queryKey: ['content-generation-queue'] });
     },
     onError: (error: Error) => {
-      console.error('Error triggering generation:', error);
+      console.error('💥 Error triggering generation:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to trigger generation",
