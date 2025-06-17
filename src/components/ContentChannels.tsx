@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Plus, Youtube, Music, Edit, Trash2, MoreVertical, Palette, Mic, Target, ExternalLink, Calendar, DollarSign, AlertCircle, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ContentChannel {
   id: string;
@@ -35,57 +36,6 @@ interface ContentChannel {
   lastGenerated?: string;
   totalVideos: number;
 }
-
-const mockChannels: ContentChannel[] = [
-  {
-    id: "1",
-    name: "Productivity Tips",
-    socialAccount: {
-      platform: "youtube",
-      accountName: "ProductivityMaster",
-      connected: true,
-    },
-    theme: {
-      id: "productivity",
-      name: "Productivity & Self-Improvement",
-      color: "from-blue-500 to-cyan-500",
-    },
-    voice: {
-      id: "aria",
-      name: "Aria",
-      type: "free",
-    },
-    topic: "Daily productivity hacks and time management",
-    schedule: "daily",
-    status: "active",
-    lastGenerated: "2 hours ago",
-    totalVideos: 47,
-  },
-  {
-    id: "2",
-    name: "Motivational Moments",
-    socialAccount: {
-      platform: "tiktok",
-      accountName: "@motivationhub",
-      connected: true,
-    },
-    theme: {
-      id: "motivation",
-      name: "Motivational Content",
-      color: "from-orange-500 to-red-500",
-    },
-    voice: {
-      id: "alexander",
-      name: "Alexander",
-      type: "premium",
-    },
-    topic: "Inspirational quotes and success mindset",
-    schedule: "twice-daily",
-    status: "active",
-    lastGenerated: "4 hours ago",
-    totalVideos: 23,
-  },
-];
 
 // Updated video style themes
 const availableVideoStyles = [
@@ -113,11 +63,8 @@ const topicCategories = [
   "Education & Learning",
 ];
 
-// Mock connected social accounts
-const mockConnectedAccounts = {
-  youtube: ["ProductivityMaster", "TechReviews2024", "CookingWithSarah"],
-  tiktok: ["@motivationhub", "@techtalks", "@foodiefinds", "@lifehacks101"],
-};
+// Mock connected TikTok accounts for now
+const mockTikTokAccounts = ["@motivationhub", "@techtalks", "@foodiefinds", "@lifehacks101"];
 
 const availableThemes = [
   { id: "productivity", name: "Productivity & Self-Improvement", color: "from-blue-500 to-cyan-500" },
@@ -148,13 +95,14 @@ interface ContentChannelsProps {
 }
 
 export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentChannelsProps) => {
-  const [channels, setChannels] = useState<ContentChannel[]>(mockChannels);
+  const [channels, setChannels] = useState<ContentChannel[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingChannel, setEditingChannel] = useState<ContentChannel | null>(null);
   const [isGeneratingTopics, setIsGeneratingTopics] = useState(false);
   const [generatedTopics, setGeneratedTopics] = useState<string[]>([]);
   const [customTopic, setCustomTopic] = useState("");
   const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
   const [formData, setFormData] = useState({
     platform: "",
     accountName: "",
@@ -168,11 +116,45 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
   useEffect(() => {
     loadConnectedChannels();
+    loadExistingChannels();
   }, []);
 
   const loadConnectedChannels = async () => {
     const youtubeChannels = await fetchConnectedChannels();
     setConnectedYouTubeChannels(youtubeChannels);
+  };
+
+  const loadExistingChannels = async () => {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
+      // For now, we'll use mock data but this is where you'd load from your content_channels table
+      // when you create that table structure
+      const mockChannels: ContentChannel[] = [
+        {
+          id: "1",
+          name: "Productivity Tips",
+          socialAccount: {
+            platform: "youtube",
+            accountName: connectedYouTubeChannels[0]?.channel_name || "ProductivityMaster",
+            connected: true,
+          },
+          theme: availableVideoStyles[0],
+          voice: availableVoices[0],
+          topic: "Daily productivity hacks and time management",
+          schedule: "daily",
+          status: "active",
+          lastGenerated: "2 hours ago",
+          totalVideos: 47,
+        },
+      ];
+      
+      setChannels(mockChannels);
+      onChannelsUpdate?.(mockChannels);
+    } catch (error) {
+      console.error('Error loading channels:', error);
+    }
   };
 
   const resetForm = () => {
@@ -190,27 +172,65 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
   const generateAITopics = async () => {
     setIsGeneratingTopics(true);
-    // Simulate AI generation
+    // Simulate AI generation based on video style
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    const aiTopics = [
-      "Morning routines that actually work",
-      "5-minute productivity hacks for busy professionals",
-      "Why most people fail at building habits",
-      "The secret to staying motivated every day",
-      "Simple tricks to boost your energy instantly",
-    ];
+    const topicsByStyle: Record<string, string[]> = {
+      story: [
+        "The story behind overnight success myths",
+        "How one small habit changed everything", 
+        "The real story of productivity experts",
+        "What happened when I tried every morning routine",
+        "The untold story of workplace efficiency"
+      ],
+      top5: [
+        "Top 5 productivity hacks that actually work",
+        "5 morning habits of successful people",
+        "Top 5 time management mistakes to avoid",
+        "5 apps that will transform your workflow",
+        "Top 5 energy boosting techniques"
+      ],
+      bestof: [
+        "Best productivity system of all time",
+        "Ultimate guide to time management",
+        "Best habits for maximum efficiency",
+        "Ultimate workspace setup guide",
+        "Best strategies for deep work"
+      ],
+      howto: [
+        "How to build a perfect morning routine",
+        "How to eliminate distractions forever",
+        "How to double your productivity in 30 days",
+        "How to master time blocking",
+        "How to create focus in a noisy world"
+      ],
+      reaction: [
+        "Reacting to viral productivity advice",
+        "Why productivity gurus are wrong",
+        "My honest review of popular time management",
+        "Reacting to extreme morning routines",
+        "The truth about productivity trends"
+      ],
+      quicktips: [
+        "60-second productivity boost",
+        "Quick energy hack for tired minds",
+        "Instant focus technique",
+        "30-second stress relief method",
+        "Quick win for better time management"
+      ]
+    };
     
+    const aiTopics = topicsByStyle[formData.videoStyle] || topicsByStyle.quicktips;
     setGeneratedTopics(aiTopics);
     setIsGeneratingTopics(false);
     
     toast({
-      title: "Topics Generated",
+      title: "Topics Generated! 🎬",
       description: "AI has suggested topics based on your video style selection!",
     });
   };
 
-  const handleCreateChannel = () => {
+  const handleCreateChannel = async () => {
     if (!formData.platform || !formData.accountName || !formData.videoStyle || !formData.voice || !formData.topic || !formData.schedule) {
       toast({
         title: "Missing Information",
@@ -220,35 +240,51 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
       return;
     }
 
-    const selectedStyle = availableVideoStyles.find(s => s.id === formData.videoStyle);
-    const selectedVoice = availableVoices.find(v => v.id === formData.voice);
+    setIsCreating(true);
 
-    const newChannel: ContentChannel = {
-      id: Date.now().toString(),
-      name: formData.accountName,
-      socialAccount: {
-        platform: formData.platform as "youtube" | "tiktok",
-        accountName: formData.accountName,
-        connected: true,
-      },
-      theme: selectedStyle!,
-      voice: selectedVoice!,
-      topic: formData.topic,
-      schedule: formData.schedule,
-      status: "setup",
-      totalVideos: 0,
-    };
+    try {
+      const selectedStyle = availableVideoStyles.find(s => s.id === formData.videoStyle);
+      const selectedVoice = availableVoices.find(v => v.id === formData.voice);
 
-    const updatedChannels = [...channels, newChannel];
-    setChannels(updatedChannels);
-    onChannelsUpdate?.(updatedChannels);
-    setIsCreateDialogOpen(false);
-    resetForm();
-    
-    toast({
-      title: "Channel Created",
-      description: `${formData.accountName} channel has been created successfully!`,
-    });
+      const newChannel: ContentChannel = {
+        id: Date.now().toString(),
+        name: `${formData.accountName} - ${selectedStyle?.name}`,
+        socialAccount: {
+          platform: formData.platform as "youtube" | "tiktok",
+          accountName: formData.accountName,
+          connected: true,
+        },
+        theme: selectedStyle!,
+        voice: selectedVoice!,
+        topic: formData.topic,
+        schedule: formData.schedule,
+        status: "setup",
+        totalVideos: 0,
+      };
+
+      // Here you would save to your content_channels table
+      // For now, we'll just update local state
+      const updatedChannels = [...channels, newChannel];
+      setChannels(updatedChannels);
+      onChannelsUpdate?.(updatedChannels);
+      
+      setIsCreateDialogOpen(false);
+      resetForm();
+      
+      toast({
+        title: "Skadoosh! 🥋",
+        description: `Channel "${newChannel.name}" has been created successfully!`,
+      });
+    } catch (error) {
+      console.error('Error creating channel:', error);
+      toast({
+        title: "Creation Failed",
+        description: "Failed to create channel. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const handleDeleteChannel = (channelId: string) => {
@@ -304,17 +340,19 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
         id: channel.channel_id,
         name: channel.channel_name,
         handle: channel.channel_handle,
+        thumbnail: channel.thumbnail_url,
       }));
     }
     
     // TikTok mock data for now
-    return mockConnectedAccounts[formData.platform as keyof typeof mockConnectedAccounts] || [];
+    return mockTikTokAccounts.map(account => ({ id: account, name: account, handle: account }));
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
+          <h2 className="text-3xl font-bold text-white mb-2">Content Channels</h2>
           <p className="text-gray-400">Create and manage your content channels</p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -407,8 +445,8 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
                         )
                       ) : (
                         getAvailableAccounts().map((account) => (
-                          <SelectItem key={account} value={account} className="text-white hover:bg-gray-700 focus:bg-gray-700">
-                            {account}
+                          <SelectItem key={account.id} value={account.name} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+                            {account.name}
                           </SelectItem>
                         ))
                       )}
@@ -596,8 +634,12 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="border-white/20 text-white hover:bg-white/10">
                 Cancel
               </Button>
-              <Button onClick={handleCreateChannel} className="bg-blue-600 hover:bg-blue-700">
-                {formData.schedule ? `Create Channel (${getSelectedSchedulePrice()})` : "Create Channel"}
+              <Button 
+                onClick={handleCreateChannel} 
+                disabled={isCreating}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isCreating ? "Creating..." : formData.schedule ? `Create Channel (${getSelectedSchedulePrice()})` : "Create Channel"}
               </Button>
             </div>
           </DialogContent>
@@ -735,7 +777,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
             </div>
             <h3 className="text-white text-lg font-semibold mb-2">No Content Channels Yet</h3>
             <p className="text-gray-400 mb-4">
-              Create your first content channel to start generating AI-powered videos
+              Create your first content channel to start generating AI-powered videos with Skadoosh! 🥋
             </p>
             <Button 
               onClick={() => setIsCreateDialogOpen(true)}
