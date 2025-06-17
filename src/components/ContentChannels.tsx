@@ -13,6 +13,7 @@ import { VoiceSelectorWithPreview } from "./VoiceSelectorWithPreview";
 import { TopicSelection } from "./TopicSelection";
 import { ChannelCreation } from "./ChannelCreation";
 import { useStripeCheckout } from "@/hooks/useStripeCheckout";
+import { useVoices } from "@/hooks/useVoices";
 
 interface ContentChannel {
   id: string;
@@ -75,15 +76,6 @@ const availableThemes = [
   { id: "knowledge", name: "Quick Learning & Facts", color: "from-purple-500 to-pink-500" },
 ];
 
-const availableVoices = [
-  { id: "aria", name: "Aria", type: "free" as const },
-  { id: "marcus", name: "Marcus", type: "free" as const },
-  { id: "sofia", name: "Sofia", type: "free" as const },
-  { id: "alexander", name: "Alexander", type: "premium" as const },
-  { id: "isabella", name: "Isabella", type: "premium" as const },
-  { id: "james", name: "James", type: "premium" as const },
-];
-
 const scheduleOptions = [
   { value: "twice-daily", label: "2x Daily", price: "$45/month", description: "Two posts per day" },
   { value: "daily", label: "Daily", price: "$30/month", description: "One post per day" },
@@ -106,6 +98,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
   const { fetchConnectedChannels } = useYouTubeAuth();
   const { createCheckoutSession } = useStripeCheckout();
+  const { voices } = useVoices();
 
   useEffect(() => {
     loadConnectedChannels();
@@ -145,30 +138,35 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
       console.log('Loaded channels from database:', dbChannels);
 
       // Transform database channels to UI format
-      const transformedChannels: ContentChannel[] = (dbChannels || []).map(dbChannel => ({
-        id: dbChannel.id,
-        name: dbChannel.name,
-        socialAccount: {
-          platform: dbChannel.platform as "youtube" | "tiktok",
-          accountName: dbChannel.account_name,
-          connected: true,
-        },
-        theme: {
-          id: dbChannel.selected_video_types[0] || 'story',
-          name: availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0])?.name || 'Story Format',
-          color: availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0])?.color || 'from-blue-500 to-cyan-500',
-        },
-        voice: {
-          id: dbChannel.selected_voice,
-          name: availableVoices.find(v => v.id === dbChannel.selected_voice)?.name || 'Unknown',
-          type: availableVoices.find(v => v.id === dbChannel.selected_voice)?.type || 'free',
-        },
-        topic: dbChannel.topic_mode === 'ai-decide' ? 'AI-Generated Topics' : `Custom: ${dbChannel.selected_topics.join(', ')}`,
-        schedule: dbChannel.schedule,
-        status: dbChannel.subscription_status as "active" | "paused" | "setup",
-        lastGenerated: "Not yet generated",
-        totalVideos: 0,
-      }));
+      const transformedChannels: ContentChannel[] = (dbChannels || []).map(dbChannel => {
+        // Find the voice from the voices hook data
+        const voiceData = voices.find(v => v.id === dbChannel.selected_voice);
+        
+        return {
+          id: dbChannel.id,
+          name: dbChannel.name,
+          socialAccount: {
+            platform: dbChannel.platform as "youtube" | "tiktok",
+            accountName: dbChannel.account_name,
+            connected: true,
+          },
+          theme: {
+            id: dbChannel.selected_video_types[0] || 'story',
+            name: availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0])?.name || 'Story Format',
+            color: availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0])?.color || 'from-blue-500 to-cyan-500',
+          },
+          voice: {
+            id: dbChannel.selected_voice,
+            name: voiceData?.name || 'Loading...',
+            type: voiceData?.type || 'free',
+          },
+          topic: dbChannel.topic_mode === 'ai-decide' ? 'AI-Generated Topics' : `Custom: ${dbChannel.selected_topics.join(', ')}`,
+          schedule: dbChannel.schedule,
+          status: dbChannel.subscription_status as "active" | "paused" | "setup",
+          lastGenerated: "Not yet generated",
+          totalVideos: 0,
+        };
+      });
       
       setChannels(transformedChannels);
       onChannelsUpdate?.(transformedChannels);
@@ -183,6 +181,32 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
       setIsLoading(false);
     }
   };
+
+  // Reload channels when voices data is available
+  useEffect(() => {
+    if (voices.length > 0 && channels.length > 0) {
+      // Update channels with correct voice names
+      const updatedChannels = channels.map(channel => {
+        const voiceData = voices.find(v => v.id === channel.voice.id);
+        if (voiceData && channel.voice.name === 'Loading...') {
+          return {
+            ...channel,
+            voice: {
+              ...channel.voice,
+              name: voiceData.name,
+              type: voiceData.type,
+            }
+          };
+        }
+        return channel;
+      });
+      
+      if (updatedChannels.some(channel => channel.voice.name !== channels.find(c => c.id === channel.id)?.voice.name)) {
+        setChannels(updatedChannels);
+        onChannelsUpdate?.(updatedChannels);
+      }
+    }
+  }, [voices, channels.length]);
 
   const handleChannelFormSubmit = async (data: {
     formData: any;

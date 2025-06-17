@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,6 +8,7 @@ import { ContentCalendar } from "@/components/ContentCalendar";
 import { VoiceSelectorWithPreview } from "@/components/VoiceSelectorWithPreview";
 import { ColorCustomizer } from "@/components/ColorCustomizer";
 import { ScriptPreview } from "@/components/ScriptPreview";
+import { useVoices } from "@/hooks/useVoices";
 
 interface ContentChannel {
   id: string;
@@ -41,6 +43,7 @@ interface ChannelContentTabsProps {
 export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentTabsProps) => {
   const [activeSubTab, setActiveSubTab] = useState("overview");
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const { voices } = useVoices();
 
   const handleVoicePreview = (voiceId: string) => {
     if (playingVoice === voiceId) {
@@ -57,6 +60,17 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
       case "setup": return "bg-blue-500/20 text-blue-400 border-blue-500/30";
       default: return "bg-gray-500/20 text-gray-400 border-gray-500/30";
     }
+  };
+
+  // Get the correct voice name from the voices data
+  const getVoiceName = (voiceId: string) => {
+    const voice = voices.find(v => v.id === voiceId);
+    return voice ? voice.name : channel.voice.name;
+  };
+
+  const getVoiceType = (voiceId: string) => {
+    const voice = voices.find(v => v.id === voiceId);
+    return voice ? voice.type : channel.voice.type;
   };
 
   return (
@@ -106,8 +120,8 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
               <div>
                 <p className="text-gray-400 text-sm">Voice</p>
                 <div className="flex items-center space-x-1">
-                  <p className="text-white font-medium text-sm md:text-base">{channel.voice.name}</p>
-                  {channel.voice.type === "premium" && <span className="text-xs">👑</span>}
+                  <p className="text-white font-medium text-sm md:text-base">{getVoiceName(channel.voice.id)}</p>
+                  {getVoiceType(channel.voice.id) === "premium" && <span className="text-xs">👑</span>}
                 </div>
               </div>
             </div>
