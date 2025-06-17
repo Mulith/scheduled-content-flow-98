@@ -91,20 +91,65 @@ serve(async (req) => {
       apiVersion: "2023-10-16" 
     });
 
-    // Define pricing based on schedule
-    const pricing = {
-      "monthly": { amount: 1500, name: "Monthly Plan" },
-      "weekly": { amount: 2000, name: "Weekly Plan" },
-      "daily": { amount: 3000, name: "Daily Plan" },
-      "twice-daily": { amount: 4500, name: "2x Daily Plan" }
+    // Find the correct price ID based on schedule
+    logStep("Looking up Stripe products and prices...");
+    const products = await stripe.products.list({ limit: 100 });
+    logStep("Found products", { count: products.data.length, products: products.data.map(p => ({ id: p.id, name: p.name })) });
+
+    let selectedPriceId = null;
+    let productName = "";
+
+    // Map schedule to product names (adjust these to match your exact product names)
+    const scheduleToProductName = {
+      "monthly": "Monthly Post",
+      "weekly": "Weekly Post", 
+      "daily": "Daily Post",
+      "twice-daily": "Twice Daily Post"
     };
 
-    const selectedPlan = pricing[schedule as keyof typeof pricing];
-    if (!selectedPlan) {
+    const targetProductName = scheduleToProductName[schedule as keyof typeof scheduleToProductName];
+    if (!targetProductName) {
       throw new Error(`Invalid schedule selected: ${schedule}`);
     }
 
-    logStep("Plan selected", selectedPlan);
+    logStep("Looking for product", { targetProductName, schedule });
+
+    // Find the product that matches our schedule
+    const matchingProduct = products.data.find(product => 
+      product.name.toLowerCase() === targetProductName.toLowerCase()
+    );
+
+    if (!matchingProduct) {
+      logStep("Product not found", { 
+        targetProductName, 
+        availableProducts: products.data.map(p => p.name) 
+      });
+      throw new Error(`Product "${targetProductName}" not found in Stripe. Available products: ${products.data.map(p => p.name).join(', ')}`);
+    }
+
+    logStep("Found matching product", { productId: matchingProduct.id, productName: matchingProduct.name });
+
+    // Get the price for this product
+    const prices = await stripe.prices.list({ 
+      product: matchingProduct.id,
+      active: true,
+      limit: 10
+    });
+
+    logStep("Found prices for product", { 
+      priceCount: prices.data.length,
+      prices: prices.data.map(p => ({ id: p.id, amount: p.unit_amount, recurring: p.recurring }))
+    });
+
+    if (prices.data.length === 0) {
+      throw new Error(`No active prices found for product "${matchingProduct.name}"`);
+    }
+
+    // Use the first active price (you might want to add logic to select specific price)
+    selectedPriceId = prices.data[0].id;
+    productName = matchingProduct.name;
+
+    logStep("Selected price", { priceId: selectedPriceId, productName });
 
     // Check if customer exists
     logStep("Checking for existing Stripe customer...");
@@ -128,15 +173,7 @@ serve(async (req) => {
       customer_email: customerId ? undefined : user.email,
       line_items: [
         {
-          price_data: {
-            currency: "usd",
-            product_data: { 
-              name: `${selectedPlan.name} - ${channelName}`,
-              description: `${schedule} posting schedule for ${channelName}`
-            },
-            unit_amount: selectedPlan.amount,
-            recurring: { interval: "month" },
-          },
+          price: selectedPriceId,
           quantity: 1,
         },
       ],
@@ -156,6 +193,7 @@ serve(async (req) => {
       customerEmail: sessionData.customer_email,
       lineItemsCount: sessionData.line_items.length,
       mode: sessionData.mode,
+      priceId: selectedPriceId,
       successUrl: sessionData.success_url,
       cancelUrl: sessionData.cancel_url
     });
