@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -43,6 +44,7 @@ serve(async (req) => {
       authUrl.searchParams.set('response_type', 'code')
       authUrl.searchParams.set('scope', 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.upload')
       authUrl.searchParams.set('access_type', 'offline')
+      authUrl.searchParams.set('prompt', 'consent') // Force consent to get refresh token
       authUrl.searchParams.set('state', user.id)
 
       return new Response(
@@ -146,7 +148,7 @@ serve(async (req) => {
           subscriber_count: parseInt(channel.statistics?.subscriberCount || '0'),
           video_count: parseInt(channel.statistics?.videoCount || '0'),
           access_token: tokenData.access_token,
-          refresh_token: tokenData.refresh_token,
+          refresh_token: tokenData.refresh_token || null, // Allow null refresh tokens
           token_expires_at: new Date(Date.now() + tokenData.expires_in * 1000).toISOString(),
         }
 

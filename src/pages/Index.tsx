@@ -193,9 +193,6 @@ const Index = () => {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge variant="secondary" className="bg-green-500/20 text-green-400 border-green-500/30 hidden sm:block">
-                Pro Plan
-              </Badge>
               <Button onClick={handleSignOut} variant="outline" className="border-white/20 text-white hover:bg-white/10 hidden sm:flex">
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out
