@@ -6,6 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, Edit, Download, Clock, Eye, Wand2 } from "lucide-react";
 
+interface ContentScene {
+  scene_number: number;
+  start_time_seconds: number;
+  end_time_seconds: number;
+  visual_description: string;
+  narration_text: string;
+}
+
 interface ContentItem {
   id: string;
   title: string;
@@ -16,6 +24,7 @@ interface ContentItem {
   channel: string;
   script: string;
   duration?: number;
+  scenes?: ContentScene[];
 }
 
 interface ScriptPreviewProps {
@@ -25,22 +34,39 @@ interface ScriptPreviewProps {
 export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
   const [selectedScene, setSelectedScene] = useState(1);
 
-  // Parse the script to create scenes (this is a simplified parser)
-  const parseScriptToScenes = (script: string) => {
-    // Split script by paragraphs or sentences to create scenes
-    const sentences = script.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    const sceneDuration = (contentItem.duration || 60) / Math.max(sentences.length, 1);
-    
-    return sentences.map((sentence, index) => ({
-      id: index + 1,
-      timestamp: `${Math.floor(index * sceneDuration / 60)}:${String(Math.floor(index * sceneDuration) % 60).padStart(2, '0')}-${Math.floor((index + 1) * sceneDuration / 60)}:${String(Math.floor((index + 1) * sceneDuration) % 60).padStart(2, '0')}`,
-      text: sentence.trim(),
-      visual: `Visual description for scene ${index + 1}: Supporting imagery for "${sentence.trim().substring(0, 30)}..."`,
-      voiceNote: index === 0 ? "Enthusiastic opening tone" : index === sentences.length - 1 ? "Strong concluding tone" : "Clear and engaging delivery"
-    }));
+  // Use actual scenes from database if available, otherwise fall back to parsing script
+  const getScenes = () => {
+    if (contentItem.scenes && contentItem.scenes.length > 0) {
+      // Use actual scene data from database
+      return contentItem.scenes.map(scene => ({
+        id: scene.scene_number,
+        timestamp: `${Math.floor(scene.start_time_seconds / 60)}:${String(scene.start_time_seconds % 60).padStart(2, '0')}-${Math.floor(scene.end_time_seconds / 60)}:${String(scene.end_time_seconds % 60).padStart(2, '0')}`,
+        text: scene.narration_text,
+        visual: scene.visual_description,
+        voiceNote: getVoiceDirection(scene.scene_number, contentItem.scenes!.length)
+      }));
+    } else {
+      // Fallback: parse script to create scenes (for backward compatibility)
+      const sentences = contentItem.script.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      const sceneDuration = (contentItem.duration || 60) / Math.max(sentences.length, 1);
+      
+      return sentences.map((sentence, index) => ({
+        id: index + 1,
+        timestamp: `${Math.floor(index * sceneDuration / 60)}:${String(Math.floor(index * sceneDuration) % 60).padStart(2, '0')}-${Math.floor((index + 1) * sceneDuration / 60)}:${String(Math.floor((index + 1) * sceneDuration) % 60).padStart(2, '0')}`,
+        text: sentence.trim(),
+        visual: `Visual description for scene ${index + 1}: Supporting imagery for "${sentence.trim().substring(0, 30)}..."`,
+        voiceNote: getVoiceDirection(index + 1, sentences.length)
+      }));
+    }
   };
 
-  const scenes = parseScriptToScenes(contentItem.script);
+  const getVoiceDirection = (sceneNumber: number, totalScenes: number) => {
+    if (sceneNumber === 1) return "Enthusiastic opening tone";
+    if (sceneNumber === totalScenes) return "Strong concluding tone";
+    return "Clear and engaging delivery";
+  };
+
+  const scenes = getScenes();
   
   const formatDuration = (seconds?: number) => {
     if (!seconds) return "60 seconds";

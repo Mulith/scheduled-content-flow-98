@@ -50,6 +50,53 @@ export const ContentCalendar = () => {
     },
   });
 
+  // Fetch scenes for the selected content item
+  const { data: selectedContentWithScenes } = useQuery({
+    queryKey: ['content-item-with-scenes', selectedIdeaId],
+    queryFn: async () => {
+      if (!selectedIdeaId) return null;
+
+      const { data: contentItem, error: contentError } = await supabase
+        .from('content_items')
+        .select(`
+          *,
+          content_channels (
+            name,
+            schedule,
+            platform
+          ),
+          content_scenes (
+            scene_number,
+            start_time_seconds,
+            end_time_seconds,
+            visual_description,
+            narration_text
+          )
+        `)
+        .eq('id', selectedIdeaId)
+        .single();
+
+      if (contentError) {
+        console.error('Error fetching content item with scenes:', contentError);
+        throw contentError;
+      }
+
+      return {
+        id: contentItem.id,
+        title: contentItem.title,
+        theme: contentItem.content_channels?.name || 'Unknown Channel',
+        scheduledFor: getScheduledDate(contentItem.created_at, contentItem.content_channels?.schedule || 'daily'),
+        status: contentItem.status,
+        engagement: getEngagementLevel(contentItem.topic_keywords?.length || 0),
+        channel: contentItem.content_channels?.name || 'Unknown Channel',
+        script: contentItem.script,
+        duration: contentItem.duration_seconds,
+        scenes: contentItem.content_scenes || []
+      };
+    },
+    enabled: !!selectedIdeaId,
+  });
+
   const getScheduledDate = (createdAt: string, schedule: string) => {
     const created = new Date(createdAt);
     const now = new Date();
@@ -69,8 +116,6 @@ export const ContentCalendar = () => {
     return "Low";
   };
 
-  const selectedIdea = selectedIdeaId ? contentItems.find(idea => idea.id === selectedIdeaId) : null;
-
   const handleIdeaClick = (ideaId: string) => {
     setSelectedIdeaId(ideaId);
   };
@@ -79,8 +124,8 @@ export const ContentCalendar = () => {
     setSelectedIdeaId(null);
   };
 
-  // If an idea is selected, show the script preview with real data
-  if (selectedIdea) {
+  // If an idea is selected, show the script preview with real data including scenes
+  if (selectedContentWithScenes) {
     return (
       <div className="space-y-6">
         <div className="flex items-center space-x-4">
@@ -93,16 +138,16 @@ export const ContentCalendar = () => {
             Back to Content Ideas
           </Button>
           <div>
-            <h2 className="text-3xl font-bold text-white">{selectedIdea.title}</h2>
+            <h2 className="text-3xl font-bold text-white">{selectedContentWithScenes.title}</h2>
             <div className="flex items-center space-x-3 mt-1">
               <Badge variant="outline" className="border-purple-500/30 text-purple-400">
-                {selectedIdea.theme}
+                {selectedContentWithScenes.theme}
               </Badge>
-              <span className="text-gray-400 text-sm">{selectedIdea.scheduledFor}</span>
+              <span className="text-gray-400 text-sm">{selectedContentWithScenes.scheduledFor}</span>
             </div>
           </div>
         </div>
-        <ScriptPreview contentItem={selectedIdea} />
+        <ScriptPreview contentItem={selectedContentWithScenes} />
       </div>
     );
   }
