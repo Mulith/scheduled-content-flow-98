@@ -6,6 +6,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // Helper logging function for enhanced debugging
@@ -15,8 +16,12 @@ const logStep = (step: string, details?: any) => {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    });
   }
 
   try {
@@ -94,6 +99,7 @@ serve(async (req) => {
         channel: existingChannel,
         message: "Channel already created"
       }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -134,6 +140,7 @@ serve(async (req) => {
       channel: newChannel,
       message: "Channel created successfully"
     }), {
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
