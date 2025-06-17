@@ -180,42 +180,55 @@ async function generateContentWithGemini(
     ? channel.selected_topics.join(', ') 
     : channel.selected_topics || 'general productivity and motivation'
 
+  // Create topic guidance based on topic mode
+  let topicGuidance = '';
+  switch (channel.topic_mode) {
+    case 'predefined':
+      topicGuidance = `You MUST create content strictly about these specific topics: ${topics}. Do not deviate from these topics.`;
+      break;
+    case 'manual':
+      topicGuidance = `Focus primarily on these topics: ${topics}, but you have some flexibility to explore related subtopics if they add value.`;
+      break;
+    case 'ai-decide':
+    default:
+      topicGuidance = `You have complete creative freedom to choose engaging topics. These are suggested areas for inspiration: ${topics}, but feel free to explore any relevant and valuable content topics.`;
+      break;
+  }
+
   const prompt = `
-You are a content creator specializing in ${topics}. Create a ${getDurationFromSchedule(channel.schedule)}-second video script.
+You are a content creator specializing in creating engaging short-form video content. Create a video script under 30 seconds.
 
 Channel Details:
 - Video Types: ${videoTypes}
-- Topics: ${topics}
-- Topic Mode: ${channel.topic_mode}
-- Voice: ${channel.selected_voice}
+- Topic Guidance: ${topicGuidance}
 
 Avoid these previously used topics: ${usedTopics.slice(-20).join(', ')}
 
 Requirements:
-1. Create an engaging title
-2. Write a complete script with natural speech patterns
-3. Break the script into 3-5 scenes with specific visual descriptions
-4. Include precise timing for each scene
+1. Create an engaging, attention-grabbing title
+2. Write a complete script with natural speech patterns that can be delivered in under 30 seconds
+3. Break the script into 2-4 scenes with specific visual descriptions
+4. Include precise timing for each scene (total duration should be 20-30 seconds)
 5. Extract 3-5 topic keywords for the content
+6. Make content engaging, actionable, and valuable to viewers
+7. Ensure scenes flow naturally and timing adds up to the total duration
 
 Return your response as valid JSON in this exact format:
 {
   "title": "Video Title",
   "script": "Complete video script...",
-  "duration_seconds": 60,
+  "duration_seconds": 25,
   "topic_keywords": ["keyword1", "keyword2", "keyword3"],
   "scenes": [
     {
       "scene_number": 1,
       "start_time_seconds": 0,
-      "end_time_seconds": 15,
+      "end_time_seconds": 8,
       "visual_description": "Detailed description of what should be shown visually",
       "narration_text": "Exact text to be spoken during this scene"
     }
   ]
 }
-
-Make the content engaging, actionable, and valuable to viewers. Ensure scenes flow naturally and timing adds up to the total duration.
 `
 
   const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -269,17 +282,17 @@ Make the content engaging, actionable, and valuable to viewers. Ensure scenes fl
 }
 
 function getDurationFromSchedule(schedule: string): number {
-  // Typical durations based on schedule frequency
+  // Set all durations to under 30 seconds by default
   switch (schedule) {
     case 'twice-daily':
-      return 45 // Shorter for frequent posting
+      return 20 // Shorter for frequent posting
     case 'daily':
-      return 60 // Standard short-form content
+      return 25 // Standard short-form content
     case 'weekly':
-      return 90 // Slightly longer for weekly content
+      return 30 // Slightly longer for weekly content
     case 'monthly':
-      return 120 // Longer for monthly content
+      return 30 // Consistent with weekly
     default:
-      return 60
+      return 25
   }
 }
