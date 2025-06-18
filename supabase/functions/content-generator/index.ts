@@ -1,24 +1,11 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { LLMGateway } from './llm-gateway.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-interface GeneratedContent {
-  title: string;
-  script: string;
-  duration_seconds: number;
-  topic_keywords: string[];
-  scenes: {
-    scene_number: number;
-    start_time_seconds: number;
-    end_time_seconds: number;
-    visual_description: string;
-    narration_text: string;
-  }[];
 }
 
 serve(async (req) => {
@@ -29,13 +16,12 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const geminiApiKey = Deno.env.get('GEMINI_API_KEY')!
     
-    if (!geminiApiKey) {
-      throw new Error('GEMINI_API_KEY not configured')
-    }
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+    // Initialize LLM Gateway
+    const llmGateway = new LLMGateway();
+    console.log('🧠 Available LLM providers:', llmGateway.getAvailableProviders());
 
     // Get pending generation requests
     const { data: pendingGenerations, error: generationError } = await supabase
@@ -87,11 +73,19 @@ serve(async (req) => {
 
         // Generate content for each item requested
         for (let i = 0; i < generation.items_to_generate; i++) {
-          const generatedContent = await generateContentWithGemini(
+          const targetDuration = getDurationFromSchedule(channel.schedule);
+          
+          const generationResult = await llmGateway.generateContent({
             channel,
             usedTopics,
-            geminiApiKey
-          )
+            targetDuration
+          });
+
+          if (!generationResult.success || !generationResult.content) {
+            throw new Error(`Content generation failed: ${generationResult.error}`);
+          }
+
+          const generatedContent = generationResult.content;
 
           // Insert content item
           const { data: contentItem, error: contentError } = await supabase
@@ -125,7 +119,7 @@ serve(async (req) => {
             throw new Error(`Error inserting scenes: ${scenesError.message}`)
           }
 
-          console.log(`Generated content: "${generatedContent.title}" for channel ${channel.name}`)
+          console.log(`Generated content: "${generatedContent.title}" for channel ${channel.name} using ${generationResult.providerId}`)
         }
 
         // Mark as completed
@@ -166,147 +160,6 @@ serve(async (req) => {
     })
   }
 })
-
-async function generateContentWithGemini(
-  channel: any, 
-  usedTopics: string[], 
-  apiKey: string
-): Promise<GeneratedContent> {
-  const videoTypes = Array.isArray(channel.selected_video_types) 
-    ? channel.selected_video_types.join(', ') 
-    : channel.selected_video_types
-
-  const topics = Array.isArray(channel.selected_topics) 
-    ? channel.selected_topics.join(', ') 
-    : channel.selected_topics || 'general productivity and motivation'
-
-  // Create topic guidance based on topic mode
-  let topicGuidance = '';
-  switch (channel.topic_mode) {
-    case 'predefined':
-      topicGuidance = `You MUST create content strictly about these specific topics: ${topics}. Do not deviate from these topics.`;
-      break;
-    case 'manual':
-      topicGuidance = `Focus primarily on these topics: ${topics}, but you have some flexibility to explore related subtopics if they add value.`;
-      break;
-    case 'ai-decide':
-    default:
-      topicGuidance = `You have complete creative freedom to choose engaging topics. These are suggested areas for inspiration: ${topics}, but feel free to explore any relevant and valuable content topics.`;
-      break;
-  }
-
-  // Get duration based on schedule - longer durations for better content
-  const targetDuration = getDurationFromSchedule(channel.schedule);
-
-  const prompt = `
-You are a content creator specializing in creating engaging short-form video content. Create a video script for exactly ${targetDuration} seconds.
-
-Channel Details:
-- Video Types: ${videoTypes}
-- Topic Guidance: ${topicGuidance}
-
-Avoid these previously used topics: ${usedTopics.slice(-20).join(', ')}
-
-CRITICAL REQUIREMENTS:
-1. Create an engaging, attention-grabbing title
-2. Write a complete script that naturally fits ${targetDuration} seconds of speech
-3. Break the script into 3-5 scenes with natural transitions
-4. Each scene should be 6-12 seconds long for natural pacing
-5. TOTAL duration must equal ${targetDuration} seconds exactly
-6. Extract 2-3 topic keywords for the content
-7. Make content engaging, actionable, and valuable to viewers
-
-VISUAL DESCRIPTION REQUIREMENTS:
-- Be extremely detailed and specific for each scene
-- Include camera angles, lighting, composition, colors
-- Describe facial expressions, gestures, and body language
-- Mention specific props, backgrounds, or settings
-- Include movement and action descriptions
-- Consider text overlays, graphics, or visual effects
-- Be cinematic and visually compelling
-
-TIMING REQUIREMENTS:
-- Scene timing must add up to exactly ${targetDuration} seconds
-- No scene should be shorter than 6 seconds or longer than 12 seconds
-- Ensure natural speech pacing (about 150-180 words per minute)
-
-Return your response as valid JSON in this exact format:
-{
-  "title": "Video Title",
-  "script": "Complete video script...",
-  "duration_seconds": ${targetDuration},
-  "topic_keywords": ["keyword1", "keyword2"],
-  "scenes": [
-    {
-      "scene_number": 1,
-      "start_time_seconds": 0,
-      "end_time_seconds": 8,
-      "visual_description": "Extreme close-up of confident speaker's face, warm golden hour lighting from the left, sharp focus on eyes with slight background blur. Speaker has a genuine smile, making direct eye contact with camera. Modern minimalist office background with subtle plants. Camera slowly zooms in during speech. Text overlay appears: 'Morning Routine Hack #1'",
-      "narration_text": "Here's the one morning habit that changed everything for me..."
-    },
-    {
-      "scene_number": 2,
-      "start_time_seconds": 8,
-      "end_time_seconds": 16,
-      "visual_description": "Medium shot of speaker demonstrating the habit, natural daylight streaming through large windows. Speaker moves with purpose and energy, hands gesturing expressively. Clean, organized space with motivational elements visible. Camera follows the movement with smooth tracking. Subtle motion graphics highlight key actions.",
-      "narration_text": "Instead of checking my phone first thing, I do this simple 5-minute routine..."
-    }
-  ]
-}
-`
-
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
-      generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 4096,
-      }
-    })
-  })
-
-  if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.statusText}`)
-  }
-
-  const data = await response.json()
-  const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text
-
-  if (!generatedText) {
-    throw new Error('No content generated from Gemini')
-  }
-
-  try {
-    // Extract JSON from the response (in case there's extra text)
-    const jsonMatch = generatedText.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      throw new Error('No valid JSON found in response')
-    }
-
-    const content = JSON.parse(jsonMatch[0])
-    
-    // Validate the structure
-    if (!content.title || !content.script || !content.scenes || !Array.isArray(content.scenes)) {
-      throw new Error('Invalid content structure returned from Gemini')
-    }
-
-    // Ensure duration is correct
-    content.duration_seconds = targetDuration;
-
-    return content as GeneratedContent
-
-  } catch (parseError) {
-    console.error('Error parsing Gemini response:', parseError)
-    console.error('Raw response:', generatedText)
-    throw new Error(`Failed to parse generated content: ${parseError.message}`)
-  }
-}
 
 function getDurationFromSchedule(schedule: string): number {
   // Updated durations for better, more natural content
