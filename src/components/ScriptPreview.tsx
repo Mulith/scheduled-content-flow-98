@@ -10,7 +10,7 @@ import { Storyboard } from "./script-preview/Storyboard";
 import { ProductionPipeline } from "./script-preview/ProductionPipeline";
 
 interface ScriptPreviewProps {
-  contentItem: ContentItem;
+  contentItem: any; // Real content item from database
 }
 
 export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
@@ -21,20 +21,27 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
     generateVideos.mutate(contentItem.id);
   };
 
-  const scenes = getScenes(contentItem);
-  
-  const mockStoryboard = scenes.map((scene, index) => {
-    const sceneData = contentItem.scenes?.find(s => s.scene_number === scene.id);
-    const sceneVideo = sceneData?.content_scene_videos?.[0];
+  // Process scenes from the real data structure
+  const scenes = contentItem.content_scenes?.map((scene: any) => ({
+    id: scene.scene_number,
+    timestamp: `${Math.floor(scene.start_time_seconds / 60)}:${(scene.start_time_seconds % 60).toString().padStart(2, '0')}`,
+    text: scene.narration_text,
+    visual: scene.visual_description,
+    voiceNote: `Scene ${scene.scene_number}`
+  })) || [];
+
+  // Process storyboard data from real database structure
+  const storyboard = contentItem.content_scenes?.map((scene: any) => {
+    const sceneVideo = scene.content_scene_videos?.[0];
     
     return {
-      scene: scene.id,
-      description: `Scene ${scene.id}: ${scene.visual}`,
+      scene: scene.scene_number,
+      description: `Scene ${scene.scene_number}: ${scene.visual_description}`,
       videoUrl: sceneVideo?.video_url,
       videoStatus: sceneVideo?.video_status || 'not_started',
       errorMessage: sceneVideo?.error_message
     };
-  });
+  }) || [];
 
   return (
     <div className="space-y-6">
@@ -73,7 +80,7 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
         </TabsContent>
 
         <TabsContent value="storyboard">
-          <Storyboard contentItem={contentItem} storyboard={mockStoryboard} />
+          <Storyboard contentItem={contentItem} storyboard={storyboard} />
         </TabsContent>
 
         <TabsContent value="production">
