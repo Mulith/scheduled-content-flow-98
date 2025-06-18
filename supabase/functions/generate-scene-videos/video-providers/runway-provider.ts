@@ -19,41 +19,55 @@ export class RunwayVideoProvider extends BaseVideoProvider {
       
       console.log(`🎬 Generating video with Runway: ${request.prompt.substring(0, 100)}...`);
 
-      // Runway ML Gen-3 API call
-      const response = await fetch('https://api.runwayml.com/v1/image_to_video', {
+      // Runway ML Gen-3 API call - using the correct endpoint
+      const response = await fetch('https://api.runwayml.com/v1/tasks', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
+          'X-Runway-Version': '2024-09-13'
         },
         body: JSON.stringify({
-          promptText: request.prompt,
-          // For text-to-video, we don't need an image
-          // Use default settings for Gen-3
-          model: 'gen3a_turbo',
-          watermark: false,
-          duration: Math.min(10, request.duration), // Runway supports up to 10 seconds
-          ratio: request.aspectRatio === '16:9' ? '16:9' : '1:1',
-          seed: Math.floor(Math.random() * 1000000)
+          taskType: 'gen3a_turbo',
+          internal: false,
+          options: {
+            promptText: request.prompt,
+            duration: Math.min(10, Math.max(5, request.duration)), // Runway supports 5-10 seconds
+            ratio: request.aspectRatio === '16:9' ? '16:9' : '1:1',
+            seed: Math.floor(Math.random() * 1000000),
+            watermark: false
+          }
         })
       });
 
+      const responseText = await response.text();
+      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Runway API error: ${response.status} - ${errorText}`);
-        throw new Error(`Runway API error: ${response.status}`);
+        console.error(`Runway API error: ${response.status} - ${responseText}`);
+        throw new Error(`Runway API error: ${response.status} - ${responseText}`);
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('Failed to parse Runway response:', responseText);
+        throw new Error(`Invalid JSON response from Runway: ${responseText}`);
+      }
+
+      console.log('✅ Runway API response:', result);
       
-      // Runway returns a task ID that we need to poll for completion
-      // For now, we'll return the task ID as the video URL
-      // In a production system, you'd want to poll for completion
-      return {
-        success: true,
-        videoUrl: result.id ? `runway_task_${result.id}` : `runway_video_${Date.now()}.mp4`,
-        providerId: this.id
-      };
+      // Runway returns a task that we need to poll for completion
+      // For now, we'll return the task ID - in production you'd poll for completion
+      if (result.id) {
+        return {
+          success: true,
+          videoUrl: `runway_task_${result.id}`,
+          providerId: this.id
+        };
+      } else {
+        throw new Error('No task ID received from Runway API');
+      }
 
     } catch (error) {
       console.error('Runway video generation error:', error);
