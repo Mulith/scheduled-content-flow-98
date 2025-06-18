@@ -168,7 +168,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
           totalVideos: 0,
           isActive: dbChannel.is_active || false,
         };
-      };
+      });
       
       setChannels(transformedChannels);
       onChannelsUpdate?.(transformedChannels);
