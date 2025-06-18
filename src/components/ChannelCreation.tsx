@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { VoiceSelectorWithPreview } from "./VoiceSelectorWithPreview";
 import { TopicSelection } from "./TopicSelection";
 import { ChannelSummary } from "./ChannelSummary";
 import { ChannelPlatformSelector } from "./ChannelPlatformSelector";
+import { ThemeSelector } from "./ThemeSelector";
 import { useYouTubeAuth } from "@/hooks/useYouTubeAuth";
 import { useEffect } from "react";
 
@@ -38,6 +40,7 @@ export const ChannelCreation = ({
   const [selectedSchedule, setSelectedSchedule] = useState("");
   const [selectedVoice, setSelectedVoice] = useState("");
   const [selectedVideoTypes, setSelectedVideoTypes] = useState<string[]>([]);
+  const [selectedThemes, setSelectedThemes] = useState<string[]>([]);
   const [topicMode, setTopicMode] = useState("ai-decide");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [internalPlayingVoice, setInternalPlayingVoice] = useState<string | null>(null);
@@ -85,6 +88,7 @@ export const ChannelCreation = ({
       selectedSchedule,
       selectedVoice,
       selectedVideoTypes,
+      selectedThemes,
       topicMode,
       selectedTopics,
       platform,
@@ -93,10 +97,19 @@ export const ChannelCreation = ({
     
     console.log("Component props - isDialog:", isDialog, "onSubmit exists:", !!onSubmit);
     
-    if (!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || !platform || !accountName || needsTopics) {
+    if (!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || selectedThemes.length === 0 || !platform || !accountName || needsTopics) {
+      const missingFields = [];
+      if (!channelName) missingFields.push("channel name");
+      if (!selectedSchedule) missingFields.push("schedule");
+      if (!selectedVoice) missingFields.push("voice");
+      if (selectedVideoTypes.length === 0) missingFields.push("video styles");
+      if (selectedThemes.length === 0) missingFields.push("themes");
+      if (!platform || !accountName) missingFields.push("platform and account");
+      if (needsTopics) missingFields.push("topics");
+      
       toast({
         title: "Missing Information",
-        description: "Please fill in all fields including platform and account selection" + (needsTopics ? " and topics" : ""),
+        description: `Please fill in: ${missingFields.join(", ")}`,
         variant: "destructive",
       });
       return;
@@ -105,6 +118,7 @@ export const ChannelCreation = ({
     const channelData = {
       selectedVideoTypes,
       selectedVoice,
+      selectedThemes,
       topicMode,
       selectedTopics,
       platform,
@@ -121,8 +135,8 @@ export const ChannelCreation = ({
         schedule: selectedSchedule,
       };
       
-      console.log("Dialog mode - calling onSubmit with:", { formData, selectedVideoStyles: selectedVideoTypes });
-      onSubmit({ formData, selectedVideoStyles: selectedVideoTypes });
+      console.log("Dialog mode - calling onSubmit with:", { formData, selectedVideoStyles: selectedVideoTypes, selectedThemes });
+      onSubmit({ formData, selectedVideoStyles: selectedVideoTypes, selectedThemes });
       return;
     }
 
@@ -160,6 +174,11 @@ export const ChannelCreation = ({
       <VideoStyleSelector 
         selectedVideoTypes={selectedVideoTypes}
         onVideoTypeToggle={handleVideoTypeToggle}
+      />
+
+      <ThemeSelector
+        selectedThemes={selectedThemes}
+        onThemesChange={setSelectedThemes}
       />
 
       <ScheduleSelector 
@@ -206,7 +225,7 @@ export const ChannelCreation = ({
         
         <Button
           onClick={handleCreateChannel}
-          disabled={!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || !platform || !accountName || (topicMode !== "ai-decide" && selectedTopics.length === 0) || (isDialog ? isCreating : checkoutLoading)}
+          disabled={!channelName || !selectedSchedule || !selectedVoice || selectedVideoTypes.length === 0 || selectedThemes.length === 0 || !platform || !accountName || (topicMode !== "ai-decide" && selectedTopics.length === 0) || (isDialog ? isCreating : checkoutLoading)}
           className={`${isDialog ? 'flex-1' : 'w-full'} bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700`}
         >
           {(isDialog ? isCreating : checkoutLoading) ? (

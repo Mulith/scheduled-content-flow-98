@@ -1,3 +1,4 @@
+
 export interface ContentGenerationRequest {
   channel: any;
   usedTopics: string[];
@@ -46,12 +47,19 @@ export abstract class BaseLLMProvider {
     const { channel, usedTopics, targetDuration, uniqueId } = request;
     
     const videoTypes = Array.isArray(channel.selected_video_types) 
-      ? channel.selected_video_types.join(', ') 
-      : channel.selected_video_types;
+      ? channel.selected_video_types 
+      : [channel.selected_video_types];
 
     const topics = Array.isArray(channel.selected_topics) 
       ? channel.selected_topics.join(', ') 
       : channel.selected_topics || 'general productivity and motivation';
+
+    const themes = Array.isArray(channel.selected_themes)
+      ? channel.selected_themes.join(', ')
+      : channel.selected_themes || '';
+
+    // Create detailed video style instructions
+    const videoStyleInstructions = this.getVideoStyleInstructions(videoTypes);
 
     // Create topic guidance based on topic mode
     let topicGuidance = '';
@@ -68,15 +76,19 @@ export abstract class BaseLLMProvider {
         break;
     }
 
+    // Add theme guidance
+    const themeGuidance = themes ? `Content Theme: Ensure your content aligns with these themes: ${themes}. Let these themes influence your topic selection, tone, and approach.` : '';
+
     // Add variety and uniqueness instructions
     const varietyInstructions = `
 IMPORTANT: Create UNIQUE and DIVERSE content. 
 - Use different angles, perspectives, and approaches
-- Vary your tone, style, and format
+- Vary your tone, style, and format within the chosen video style
 - Explore different aspects of the topic
 - Be creative and original
 - Avoid repetitive patterns or formulaic content
 - Each piece should feel fresh and distinct
+- Don't always use the same examples or scenarios
 ${uniqueId ? `- Content ID: ${uniqueId}` : ''}
 `;
 
@@ -84,21 +96,23 @@ ${uniqueId ? `- Content ID: ${uniqueId}` : ''}
 You are a content creator specializing in creating engaging short-form video content. Create a video script for exactly ${targetDuration} seconds.
 
 Channel Details:
-- Video Types: ${videoTypes}
+- Video Style: ${videoStyleInstructions}
 - Topic Guidance: ${topicGuidance}
+${themeGuidance ? `- ${themeGuidance}` : ''}
 
-Avoid these previously used topics: ${usedTopics.slice(-20).join(', ')}
+Avoid these previously used topics and keywords: ${usedTopics.slice(-20).join(', ')}
 
 ${varietyInstructions}
 
 CRITICAL REQUIREMENTS:
-1. Create an engaging, attention-grabbing title
+1. Create an engaging, attention-grabbing title that matches the video style
 2. Write a complete script that naturally fits ${targetDuration} seconds of speech
 3. Break the script into 3-5 scenes with natural transitions
 4. Each scene should be 6-12 seconds long for natural pacing
 5. TOTAL duration must equal ${targetDuration} seconds exactly
 6. Extract 2-3 topic keywords for the content
 7. Make content engaging, actionable, and valuable to viewers
+8. STRICTLY follow the chosen video style format and structure
 
 VISUAL DESCRIPTION REQUIREMENTS:
 - Be extremely detailed and specific for each scene
@@ -108,6 +122,7 @@ VISUAL DESCRIPTION REQUIREMENTS:
 - Include movement and action descriptions
 - Consider text overlays, graphics, or visual effects
 - Be cinematic and visually compelling
+- Match the visual style to the content format
 
 TIMING REQUIREMENTS:
 - Scene timing must add up to exactly ${targetDuration} seconds
@@ -125,18 +140,29 @@ Return your response as valid JSON in this exact format:
       "scene_number": 1,
       "start_time_seconds": 0,
       "end_time_seconds": 8,
-      "visual_description": "Extreme close-up of confident speaker's face, warm golden hour lighting from the left, sharp focus on eyes with slight background blur. Speaker has a genuine smile, making direct eye contact with camera. Modern minimalist office background with subtle plants. Camera slowly zooms in during speech. Text overlay appears: 'Morning Routine Hack #1'",
-      "narration_text": "Here's the one morning habit that changed everything for me..."
-    },
-    {
-      "scene_number": 2,
-      "start_time_seconds": 8,
-      "end_time_seconds": 16,
-      "visual_description": "Medium shot of speaker demonstrating the habit, natural daylight streaming through large windows. Speaker moves with purpose and energy, hands gesturing expressively. Clean, organized space with motivational elements visible. Camera follows the movement with smooth tracking. Subtle motion graphics highlight key actions.",
-      "narration_text": "Instead of checking my phone first thing, I do this simple 5-minute routine..."
+      "visual_description": "Detailed visual description matching the video style...",
+      "narration_text": "Script text for this scene..."
     }
   ]
 }`;
+  }
+
+  private getVideoStyleInstructions(videoTypes: string[]): string {
+    const styleInstructions = {
+      'story': `Story Format - Create narrative-driven content with a clear beginning, middle, and end. Tell a compelling story with characters, conflict, and resolution. Use storytelling techniques like hooks, tension, and emotional payoffs. Examples: personal transformation stories, case studies, customer success stories, behind-the-scenes narratives.`,
+      
+      'top5': `Top 5 Lists - Create countdown and ranking format content. Structure as "Top 5 [Topic]", "5 Best [Things]", or "5 Worst [Mistakes]". Start with #5 and build to #1 for maximum engagement. Each point should be distinct and valuable. Use clear transitions between items.`,
+      
+      'bestof': `Best of All Time - Create ultimate guides and definitive lists. Position content as the "ultimate", "definitive", or "complete" guide to a topic. Present authoritative information as if it's the final word on the subject. Use superlatives and definitive language.`,
+      
+      'howto': `How-To Tutorial - Create step-by-step instructional content. Break down complex processes into simple, actionable steps. Use clear, direct language. Number your steps clearly (Step 1, Step 2, etc.). Focus on practical, implementable advice.`,
+      
+      'reaction': `Reaction & Commentary - Create response and opinion-based content. React to trends, news, or common situations. Share personal opinions and insights. Use phrases like "Here's what I think...", "My take on this is...", "What people don't realize is...". Be conversational and authentic.`,
+      
+      'quicktips': `Quick Tips - Create short, actionable advice format. Present rapid-fire tips and hacks. Use bullet-point style delivery. Focus on immediate value and quick wins. Start with "Quick tip:", "Pro tip:", or "Here's a hack:". Keep each tip concise and actionable.`
+    };
+
+    return videoTypes.map(type => styleInstructions[type] || `${type} format content`).join(' Combined with: ');
   }
 
   protected parseResponse(responseText: string): GeneratedContent {

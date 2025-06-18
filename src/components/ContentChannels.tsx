@@ -168,7 +168,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
           totalVideos: 0,
           isActive: dbChannel.is_active || false,
         };
-      });
+      };
       
       setChannels(transformedChannels);
       onChannelsUpdate?.(transformedChannels);
@@ -213,18 +213,20 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
   const handleChannelFormSubmit = async (data: {
     formData: any;
     selectedVideoStyles: string[];
+    selectedThemes: string[];
   }) => {
     console.log("ContentChannels - handleChannelFormSubmit called with:", data);
     
     try {
       setIsCreatingChannel(true);
       
-      const { formData, selectedVideoStyles } = data;
+      const { formData, selectedVideoStyles, selectedThemes } = data;
       const channelName = `${formData.accountName} Channel`; // Generate a channel name
       
       const channelData = {
         selectedVideoTypes: selectedVideoStyles,
         selectedVoice: formData.voice,
+        selectedThemes: selectedThemes,
         topicMode: formData.topic,
         selectedTopics: [],
         platform: formData.platform,
