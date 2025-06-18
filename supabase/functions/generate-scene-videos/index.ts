@@ -128,11 +128,19 @@ serve(async (req) => {
           quality: 'standard'
         })
 
-        console.log(`📊 Video generation result for scene ${scene.scene_number}:`, videoResult)
+        console.log(`📊 Video generation result for scene ${scene.scene_number}:`, {
+          success: videoResult.success,
+          hasUrl: !!videoResult.videoUrl,
+          providerId: videoResult.providerId,
+          urlLength: videoResult.videoUrl?.length,
+          error: videoResult.error
+        })
 
-        if (videoResult.success) {
+        if (videoResult.success && videoResult.videoUrl) {
+          console.log(`💾 Updating database with video URL for scene ${scene.scene_number}:`, videoResult.videoUrl)
+          
           // Update scene video with generated video URL
-          const { error: updateVideoError } = await supabase
+          const { data: updateData, error: updateVideoError } = await supabase
             .from('content_scene_videos')
             .update({
               video_url: videoResult.videoUrl,
@@ -140,13 +148,15 @@ serve(async (req) => {
               completed_at: new Date().toISOString()
             })
             .eq('id', sceneVideoId)
+            .select()
 
           if (updateVideoError) {
             console.error(`❌ Error updating scene video for scene ${scene.scene_number}:`, updateVideoError)
             failCount++
           } else {
-            console.log(`✅ Video generated successfully for scene ${scene.scene_number} using ${videoResult.providerId}`)
-            console.log(`🔗 Video URL: ${videoResult.videoUrl}`)
+            console.log(`✅ Successfully updated database for scene ${scene.scene_number}`)
+            console.log(`📋 Updated record:`, updateData)
+            console.log(`🔗 Video URL stored: ${videoResult.videoUrl}`)
             successCount++
           }
         } else {

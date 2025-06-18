@@ -14,10 +14,12 @@ export interface VideoGenerationResponse {
 }
 
 export abstract class BaseVideoProvider {
-  abstract readonly providerId: string;
-  abstract readonly name: string;
-  abstract readonly isAvailable: boolean;
+  protected constructor(
+    public readonly id: string,
+    public readonly name: string
+  ) {}
 
+  abstract get isAvailable(): boolean;
   abstract generateVideo(request: VideoGenerationRequest): Promise<VideoGenerationResponse>;
 
   protected validateRequest(request: VideoGenerationRequest): void {

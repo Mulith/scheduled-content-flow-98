@@ -18,6 +18,8 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
       status: item.videoStatus,
       hasUrl: !!item.videoUrl,
       videoUrl: item.videoUrl, // Log the actual URL
+      urlType: typeof item.videoUrl,
+      urlLength: item.videoUrl?.length,
       error: item.errorMessage
     }))
   });
@@ -64,12 +66,21 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
                       preload="metadata"
                       onError={(e) => {
                         console.error('❌ Video load error for scene', board.scene, '- URL:', board.videoUrl, 'Error:', e);
+                        console.error('❌ Video element error details:', {
+                          src: e.currentTarget.src,
+                          networkState: e.currentTarget.networkState,
+                          readyState: e.currentTarget.readyState,
+                          error: e.currentTarget.error
+                        });
                       }}
                       onLoadStart={() => {
                         console.log('▶️ Video loading started for scene', board.scene, '- URL:', board.videoUrl);
                       }}
                       onLoadedData={() => {
                         console.log('✅ Video loaded successfully for scene', board.scene);
+                      }}
+                      onCanPlay={() => {
+                        console.log('🎯 Video can start playing for scene', board.scene);
                       }}
                     />
                   ) : board.videoStatus === 'generating' ? (
@@ -119,9 +130,14 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
                 )}
 
                 {board.videoUrl && (
-                  <p className="text-green-400 text-xs mt-1 truncate" title={board.videoUrl}>
-                    ✓ Video URL: {board.videoUrl.length > 30 ? board.videoUrl.substring(0, 30) + '...' : board.videoUrl}
-                  </p>
+                  <div className="mt-1">
+                    <p className="text-green-400 text-xs truncate" title={board.videoUrl}>
+                      ✓ Video URL: {board.videoUrl.length > 30 ? board.videoUrl.substring(0, 30) + '...' : board.videoUrl}
+                    </p>
+                    <p className="text-blue-400 text-xs">
+                      Status: {board.videoStatus} | Length: {board.videoUrl.length} chars
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>

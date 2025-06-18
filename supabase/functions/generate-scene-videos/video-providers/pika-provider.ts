@@ -2,15 +2,15 @@
 import { BaseVideoProvider, VideoGenerationRequest, VideoGenerationResponse } from './base-provider.ts';
 
 export class PikaVideoProvider extends BaseVideoProvider {
-  readonly providerId = 'pika';
-  readonly name = 'Pika Labs';
-  readonly isAvailable = true;
-
   private apiKey: string;
 
   constructor(apiKey: string) {
-    super();
+    super('pika', 'Pika Labs');
     this.apiKey = apiKey;
+  }
+
+  get isAvailable(): boolean {
+    return !!this.apiKey;
   }
 
   async generateVideo(request: VideoGenerationRequest): Promise<VideoGenerationResponse> {
@@ -25,7 +25,7 @@ export class PikaVideoProvider extends BaseVideoProvider {
       return {
         success: true,
         videoUrl: `pika_video_${Date.now()}.mp4`,
-        providerId: this.providerId
+        providerId: this.id
       };
 
     } catch (error) {
@@ -33,7 +33,7 @@ export class PikaVideoProvider extends BaseVideoProvider {
       return {
         success: false,
         error: error.message,
-        providerId: this.providerId
+        providerId: this.id
       };
     }
   }

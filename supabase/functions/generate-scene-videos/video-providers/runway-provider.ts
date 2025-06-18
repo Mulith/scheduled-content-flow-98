@@ -2,15 +2,15 @@
 import { BaseVideoProvider, VideoGenerationRequest, VideoGenerationResponse } from './base-provider.ts';
 
 export class RunwayVideoProvider extends BaseVideoProvider {
-  readonly providerId = 'runway';
-  readonly name = 'Runway ML';
-  readonly isAvailable = true;
-
   private apiKey: string;
 
   constructor(apiKey: string) {
-    super();
+    super('runway', 'Runway ML');
     this.apiKey = apiKey;
+  }
+
+  get isAvailable(): boolean {
+    return !!this.apiKey;
   }
 
   async generateVideo(request: VideoGenerationRequest): Promise<VideoGenerationResponse> {
@@ -52,7 +52,7 @@ export class RunwayVideoProvider extends BaseVideoProvider {
       return {
         success: true,
         videoUrl: result.id ? `runway_task_${result.id}` : `runway_video_${Date.now()}.mp4`,
-        providerId: this.providerId
+        providerId: this.id
       };
 
     } catch (error) {
@@ -60,7 +60,7 @@ export class RunwayVideoProvider extends BaseVideoProvider {
       return {
         success: false,
         error: error.message,
-        providerId: this.providerId
+        providerId: this.id
       };
     }
   }

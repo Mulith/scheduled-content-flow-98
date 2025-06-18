@@ -29,6 +29,8 @@ export class MockVideoProvider extends BaseVideoProvider {
     const randomIndex = Math.floor(Math.random() * sampleVideos.length);
     const videoUrl = sampleVideos[randomIndex];
 
+    console.log(`✅ Mock provider generated video URL: ${videoUrl}`);
+
     return {
       success: true,
       videoUrl: videoUrl,
