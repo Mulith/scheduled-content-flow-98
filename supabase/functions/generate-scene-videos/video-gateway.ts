@@ -3,6 +3,7 @@ import { BaseVideoProvider, VideoGenerationRequest, VideoGenerationResponse } fr
 import { ReplicateVideoProvider } from './video-providers/replicate-provider.ts';
 import { RunwayVideoProvider } from './video-providers/runway-provider.ts';
 import { PikaVideoProvider } from './video-providers/pika-provider.ts';
+import { VEO2VideoProvider } from './video-providers/veo2-provider.ts';
 import { MockVideoProvider } from './video-providers/mock-provider.ts';
 
 export class VideoGenerationGateway {
@@ -21,12 +22,19 @@ export class VideoGenerationGateway {
     const replicateKey = Deno.env.get('REPLICATE_API_KEY');
     const runwayKey = Deno.env.get('RUNWAY_API_KEY');
     const pikaKey = Deno.env.get('PIKA_API_KEY');
+    const geminiKey = Deno.env.get('GEMINI_API_KEY');
 
     console.log('🔑 Checking API keys:', {
       replicate: !!replicateKey,
       runway: !!runwayKey,
-      pika: !!pikaKey
+      pika: !!pikaKey,
+      veo2: !!geminiKey
     });
+
+    if (geminiKey) {
+      this.providers.set('veo2', new VEO2VideoProvider(geminiKey));
+      console.log('✅ VEO2 provider initialized');
+    }
 
     if (replicateKey) {
       this.providers.set('replicate', new ReplicateVideoProvider(replicateKey));
@@ -49,8 +57,8 @@ export class VideoGenerationGateway {
   }
 
   private determinePrimaryProvider(): string {
-    // Priority order: Runway > Replicate > Pika > Mock
-    const priorityOrder = ['runway', 'replicate', 'pika', 'mock'];
+    // Priority order: VEO2 > Runway > Replicate > Pika > Mock
+    const priorityOrder = ['veo2', 'runway', 'replicate', 'pika', 'mock'];
     
     for (const providerId of priorityOrder) {
       const provider = this.providers.get(providerId);
