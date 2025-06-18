@@ -17,6 +17,7 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
       scene: item.scene,
       status: item.videoStatus,
       hasUrl: !!item.videoUrl,
+      videoUrl: item.videoUrl, // Log the actual URL
       error: item.errorMessage
     }))
   });
@@ -62,10 +63,10 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
                       muted
                       preload="metadata"
                       onError={(e) => {
-                        console.error('❌ Video load error for scene', board.scene, ':', e);
+                        console.error('❌ Video load error for scene', board.scene, '- URL:', board.videoUrl, 'Error:', e);
                       }}
                       onLoadStart={() => {
-                        console.log('▶️ Video loading started for scene', board.scene);
+                        console.log('▶️ Video loading started for scene', board.scene, '- URL:', board.videoUrl);
                       }}
                       onLoadedData={() => {
                         console.log('✅ Video loaded successfully for scene', board.scene);
@@ -119,7 +120,7 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
 
                 {board.videoUrl && (
                   <p className="text-green-400 text-xs mt-1 truncate" title={board.videoUrl}>
-                    ✓ Video ready
+                    ✓ Video URL: {board.videoUrl.length > 30 ? board.videoUrl.substring(0, 30) + '...' : board.videoUrl}
                   </p>
                 )}
               </CardContent>

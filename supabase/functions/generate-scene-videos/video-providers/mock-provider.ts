@@ -2,37 +2,37 @@
 import { BaseVideoProvider, VideoGenerationRequest, VideoGenerationResponse } from './base-provider.ts';
 
 export class MockVideoProvider extends BaseVideoProvider {
-  readonly providerId = 'mock';
-  readonly name = 'Mock Provider (Development)';
-  readonly isAvailable = true;
+  constructor() {
+    super('mock', 'Mock Provider (Development)');
+  }
+
+  get isAvailable(): boolean {
+    return true; // Always available for development
+  }
 
   async generateVideo(request: VideoGenerationRequest): Promise<VideoGenerationResponse> {
-    try {
-      this.validateRequest(request);
-      
-      console.log(`🎬 Mock generating video: ${request.prompt.substring(0, 100)}...`);
-      
-      // Simulate processing time
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      // Simulate some failures for testing
-      if (Math.random() < 0.1) {
-        throw new Error('Mock generation failure for testing');
-      }
-      
-      return {
-        success: true,
-        videoUrl: `https://example.com/mock_video_${Date.now()}.mp4`,
-        providerId: this.providerId
-      };
+    console.log(`🎬 Mock generating video: ${request.prompt.substring(0, 100)}...`);
+    
+    // Simulate processing time
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Generate a working video URL using a public video file
+    // Using a sample video from the internet that actually exists
+    const sampleVideos = [
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4'
+    ];
+    
+    // Select a random sample video
+    const randomIndex = Math.floor(Math.random() * sampleVideos.length);
+    const videoUrl = sampleVideos[randomIndex];
 
-    } catch (error) {
-      console.error('Mock video generation error:', error);
-      return {
-        success: false,
-        error: error.message,
-        providerId: this.providerId
-      };
-    }
+    return {
+      success: true,
+      videoUrl: videoUrl,
+      providerId: this.id
+    };
   }
 }
