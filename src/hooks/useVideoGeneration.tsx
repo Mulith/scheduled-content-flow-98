@@ -23,12 +23,12 @@ export const useVideoGeneration = () => {
       return data;
     },
     onSuccess: (data) => {
-      console.log('🎉 Video generation completed successfully:', data);
+      console.log('🎉 Video generation initiated successfully:', data);
       toast({
         title: "Video Generation Started",
-        description: `Generating videos for ${data?.videosGenerated || 0} scenes.`,
+        description: `Processing ${data?.scenesProcessed || 0} scenes. Check the storyboard for progress.`,
       });
-      // Invalidate content items to refresh the UI
+      // Invalidate queries to refresh the UI
       queryClient.invalidateQueries({ queryKey: ['content-items'] });
       queryClient.invalidateQueries({ queryKey: ['content-item-with-scenes'] });
     },
@@ -36,7 +36,7 @@ export const useVideoGeneration = () => {
       console.error('💥 Error generating videos:', error);
       toast({
         title: "Video Generation Failed",
-        description: error.message || "Failed to generate videos",
+        description: error.message || "Failed to start video generation",
         variant: "destructive",
       });
     },

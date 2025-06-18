@@ -8,7 +8,7 @@ export const useContentItemWithScenes = (contentItemId: string | null) => {
     queryFn: async () => {
       if (!contentItemId) return null;
 
-      console.log('Fetching content item with scenes:', contentItemId);
+      console.log('🔍 Fetching content item with scenes:', contentItemId);
 
       const { data, error } = await supabase
         .from('content_items')
@@ -23,14 +23,31 @@ export const useContentItemWithScenes = (contentItemId: string | null) => {
         .single();
 
       if (error) {
-        console.error('Error fetching content item:', error);
+        console.error('❌ Error fetching content item:', error);
         throw error;
       }
 
-      console.log('Fetched content item with scenes:', data);
+      console.log('✅ Fetched content item with scenes:', {
+        id: data.id,
+        title: data.title,
+        video_status: data.video_status,
+        generation_stage: data.generation_stage,
+        scenes: data.content_scenes?.map(scene => ({
+          scene_number: scene.scene_number,
+          videos_count: scene.content_scene_videos?.length || 0,
+          videos: scene.content_scene_videos?.map(v => ({
+            id: v.id,
+            video_status: v.video_status,
+            has_url: !!v.video_url,
+            error: v.error_message
+          }))
+        }))
+      });
+
       return data;
     },
     enabled: !!contentItemId,
-    refetchInterval: 5000, // Refetch every 5 seconds to get video updates
+    refetchInterval: 3000, // Refetch every 3 seconds to get video updates
+    staleTime: 1000, // Consider data stale after 1 second
   });
 };
