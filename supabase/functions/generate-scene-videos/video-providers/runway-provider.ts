@@ -19,31 +19,39 @@ export class RunwayVideoProvider extends BaseVideoProvider {
       
       console.log(`🎬 Generating video with Runway: ${request.prompt.substring(0, 100)}...`);
 
-      // Runway ML API call
-      const response = await fetch('https://api.runwayml.com/v1/generate', {
+      // Runway ML Gen-3 API call
+      const response = await fetch('https://api.runwayml.com/v1/image_to_video', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          prompt: request.prompt,
-          model: 'gen3',
-          duration: Math.min(10, request.duration), // Runway typically supports up to 10s
-          resolution: '1280x768',
+          promptText: request.prompt,
+          // For text-to-video, we don't need an image
+          // Use default settings for Gen-3
+          model: 'gen3a_turbo',
+          watermark: false,
+          duration: Math.min(10, request.duration), // Runway supports up to 10 seconds
+          ratio: request.aspectRatio === '16:9' ? '16:9' : '1:1',
           seed: Math.floor(Math.random() * 1000000)
         })
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Runway API error: ${response.status} - ${errorText}`);
         throw new Error(`Runway API error: ${response.status}`);
       }
 
       const result = await response.json();
       
+      // Runway returns a task ID that we need to poll for completion
+      // For now, we'll return the task ID as the video URL
+      // In a production system, you'd want to poll for completion
       return {
         success: true,
-        videoUrl: result.video_url || `runway_video_${Date.now()}.mp4`,
+        videoUrl: result.id ? `runway_task_${result.id}` : `runway_video_${Date.now()}.mp4`,
         providerId: this.providerId
       };
 

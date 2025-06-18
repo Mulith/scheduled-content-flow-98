@@ -1,8 +1,8 @@
-
 export interface ContentGenerationRequest {
   channel: any;
   usedTopics: string[];
   targetDuration: number;
+  uniqueId?: string; // Add unique identifier for each request
 }
 
 export interface GeneratedContent {
@@ -43,7 +43,7 @@ export abstract class BaseLLMProvider {
   }
 
   protected buildPrompt(request: ContentGenerationRequest): string {
-    const { channel, usedTopics, targetDuration } = request;
+    const { channel, usedTopics, targetDuration, uniqueId } = request;
     
     const videoTypes = Array.isArray(channel.selected_video_types) 
       ? channel.selected_video_types.join(', ') 
@@ -68,6 +68,18 @@ export abstract class BaseLLMProvider {
         break;
     }
 
+    // Add variety and uniqueness instructions
+    const varietyInstructions = `
+IMPORTANT: Create UNIQUE and DIVERSE content. 
+- Use different angles, perspectives, and approaches
+- Vary your tone, style, and format
+- Explore different aspects of the topic
+- Be creative and original
+- Avoid repetitive patterns or formulaic content
+- Each piece should feel fresh and distinct
+${uniqueId ? `- Content ID: ${uniqueId}` : ''}
+`;
+
     return `
 You are a content creator specializing in creating engaging short-form video content. Create a video script for exactly ${targetDuration} seconds.
 
@@ -76,6 +88,8 @@ Channel Details:
 - Topic Guidance: ${topicGuidance}
 
 Avoid these previously used topics: ${usedTopics.slice(-20).join(', ')}
+
+${varietyInstructions}
 
 CRITICAL REQUIREMENTS:
 1. Create an engaging, attention-grabbing title

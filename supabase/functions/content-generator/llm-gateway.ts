@@ -46,6 +46,15 @@ export class LLMGateway {
       };
     }
 
+    // Add randomization to the request to ensure unique content
+    const enhancedRequest = {
+      ...request,
+      // Add a unique seed/variation to prevent identical content
+      uniqueId: `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      // Add some randomization to the used topics to encourage variety
+      usedTopics: [...request.usedTopics, `variation_${Math.floor(Math.random() * 1000)}`]
+    };
+
     // Try providers in fallback order
     for (const providerId of this.fallbackOrder) {
       const provider = this.providers.find(p => p.providerId === providerId && p.isAvailable);
@@ -58,7 +67,7 @@ export class LLMGateway {
       console.log(`🔄 Attempting content generation with ${provider.name}`);
       
       try {
-        const result = await provider.generateContent(request);
+        const result = await provider.generateContent(enhancedRequest);
         
         if (result.success) {
           console.log(`✅ Content generation successful with ${provider.name}`);
