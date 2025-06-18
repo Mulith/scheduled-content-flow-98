@@ -19,8 +19,8 @@ export class RunwayVideoProvider extends BaseVideoProvider {
       
       console.log(`🎬 Generating video with Runway: ${request.prompt.substring(0, 100)}...`);
 
-      // Runway ML Gen-3 API call - using the correct endpoint for video generation
-      const response = await fetch('https://api.runwayml.com/v1/image_to_video', {
+      // Runway ML Gen-3 API call - using the correct v1 endpoint for text-to-video
+      const response = await fetch('https://api.runwayml.com/v1/text-to-video', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
@@ -28,9 +28,9 @@ export class RunwayVideoProvider extends BaseVideoProvider {
         },
         body: JSON.stringify({
           model: 'gen3a_turbo',
-          prompt_text: request.prompt,
-          duration: Math.min(10, Math.max(5, request.duration)), // Runway supports 5-10 seconds
-          ratio: request.aspectRatio === '16:9' ? '1280:768' : '768:768',
+          text_prompt: request.prompt,
+          duration: Math.min(10, Math.max(5, request.duration)),
+          resolution: request.aspectRatio === '16:9' ? '1280x768' : '768x768',
           seed: Math.floor(Math.random() * 1000000)
         })
       });
