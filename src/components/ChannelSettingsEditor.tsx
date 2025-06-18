@@ -20,12 +20,11 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
     try {
       console.log('Saving channel settings:', editedChannel);
       
-      // Update the channel in the database
+      // Update the channel in the database using only existing columns
       const { error } = await supabase
         .from('content_channels')
         .update({
           selected_voice: editedChannel.voice.id,
-          selected_themes: editedChannel.themes || [],
           schedule: editedChannel.schedule,
           topic_mode: editedChannel.topic.includes('AI-Generated') ? 'ai-decide' : 'custom',
           updated_at: new Date().toISOString()
