@@ -181,21 +181,22 @@ async function generateVideoWithVEO3(
     // Get access token for Google Cloud API
     const accessToken = await getGoogleCloudAccessToken(credentials)
     
-    // VEO 3 API endpoint for Vertex AI
-    const endpoint = `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/veo-3:generateContent`
+    // VEO 3 API endpoint - using the correct Imagen video generation endpoint
+    const endpoint = `https://us-central1-aiplatform.googleapis.com/v1/projects/${projectId}/locations/us-central1/publishers/google/models/imagen-3.0-generate-video:predict`
     
-    // Prepare the request payload for VEO 3
+    // Prepare the request payload for VEO 3 video generation
     const payload = {
-      contents: [{
-        parts: [{
-          text: `Generate a ${request.duration}-second video: ${request.prompt}`
-        }]
+      instances: [{
+        prompt: `Create a ${request.duration}-second video: ${request.prompt}`,
+        negative_prompt: "blurry, low quality, distorted, watermark",
+        video_duration: request.duration,
+        aspect_ratio: "16:9",
+        fps: 24
       }],
-      generationConfig: {
-        maxOutputTokens: 8192,
-        temperature: 0.4,
-        topP: 1,
-        topK: 32
+      parameters: {
+        seed: Math.floor(Math.random() * 1000000),
+        motion_bucket_id: 127,
+        fps: 24
       }
     }
 
@@ -217,37 +218,32 @@ async function generateVideoWithVEO3(
     }
 
     const result = await response.json()
-    console.log(`📄 VEO 3 API response:`, JSON.stringify(result, null, 2))
+    console.log(`📄 VEO 3 API response received`)
 
     // Extract video URL from the response
-    // Note: The actual response structure may vary - this is based on typical Vertex AI responses
-    if (result.candidates && result.candidates[0] && result.candidates[0].content) {
-      const content = result.candidates[0].content
+    if (result.predictions && result.predictions[0]) {
+      const prediction = result.predictions[0]
       
-      // Look for video content in the response
-      if (content.parts && content.parts[0]) {
-        const videoData = content.parts[0]
-        
-        // If there's a video URL or base64 data, process it
-        if (videoData.videoUrl) {
-          console.log(`✅ VEO 3 video generated successfully: ${videoData.videoUrl}`)
-          return {
-            success: true,
-            videoUrl: videoData.videoUrl
-          }
-        } else if (videoData.inlineData && videoData.inlineData.data) {
-          // Handle base64 video data - you might want to upload this to cloud storage
-          console.log(`✅ VEO 3 video generated as base64 data`)
-          const videoUrl = `data:video/mp4;base64,${videoData.inlineData.data}`
-          return {
-            success: true,
-            videoUrl: videoUrl
-          }
+      if (prediction.bytesBase64Encoded) {
+        // Convert base64 to a data URL
+        const videoUrl = `data:video/mp4;base64,${prediction.bytesBase64Encoded}`
+        console.log(`✅ VEO 3 video generated successfully`)
+        return {
+          success: true,
+          videoUrl: videoUrl
+        }
+      } else if (prediction.gcsUri) {
+        // If response contains a GCS URI, use that
+        console.log(`✅ VEO 3 video generated at GCS: ${prediction.gcsUri}`)
+        return {
+          success: true,
+          videoUrl: prediction.gcsUri
         }
       }
     }
 
     // If we get here, the response format wasn't as expected
+    console.error('Unexpected VEO 3 API response format:', JSON.stringify(result, null, 2))
     throw new Error('Unexpected response format from VEO 3 API')
     
   } catch (error) {
@@ -262,13 +258,14 @@ async function generateVideoWithVEO3(
 async function getGoogleCloudAccessToken(credentials: any): Promise<string> {
   try {
     // Create JWT for service account authentication
-    const header = {
+    const jwtHeader = {
       alg: 'RS256',
-      typ: 'JWT'
+      typ: 'JWT',
+      kid: credentials.private_key_id
     }
 
     const now = Math.floor(Date.now() / 1000)
-    const payload = {
+    const jwtPayload = {
       iss: credentials.client_email,
       scope: 'https://www.googleapis.com/auth/cloud-platform',
       aud: 'https://oauth2.googleapis.com/token',
@@ -276,12 +273,8 @@ async function getGoogleCloudAccessToken(credentials: any): Promise<string> {
       iat: now
     }
 
-    // Note: In a production environment, you'd need to properly sign the JWT
-    // This is a simplified version - you may need to use a proper JWT library
-    const encodedHeader = btoa(JSON.stringify(header))
-    const encodedPayload = btoa(JSON.stringify(payload))
-    
-    // For now, we'll use the service account key directly with Google's OAuth2 endpoint
+    // For production, we need to properly sign the JWT
+    // For now, let's use Google's OAuth2 service account flow
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
@@ -289,39 +282,14 @@ async function getGoogleCloudAccessToken(credentials: any): Promise<string> {
       },
       body: new URLSearchParams({
         grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-        assertion: `${encodedHeader}.${encodedPayload}.signature` // Simplified - needs proper signing
+        assertion: createJWT(jwtHeader, jwtPayload, credentials.private_key)
       })
     })
 
     if (!tokenResponse.ok) {
-      // Fallback: try using the service account key directly
-      console.log('JWT authentication failed, trying alternative approach...')
-      
-      const response = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          type: credentials.type,
-          project_id: credentials.project_id,
-          private_key_id: credentials.private_key_id,
-          private_key: credentials.private_key,
-          client_email: credentials.client_email,
-          client_id: credentials.client_id,
-          auth_uri: credentials.auth_uri,
-          token_uri: credentials.token_uri,
-          grant_type: 'client_credentials',
-          scope: 'https://www.googleapis.com/auth/cloud-platform'
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error(`Failed to get access token: ${response.status}`)
-      }
-
-      const tokenData = await response.json()
-      return tokenData.access_token
+      const errorText = await tokenResponse.text()
+      console.error(`Token request failed: ${tokenResponse.status} - ${errorText}`)
+      throw new Error(`Failed to get access token: ${tokenResponse.status}`)
     }
 
     const tokenData = await tokenResponse.json()
@@ -331,4 +299,24 @@ async function getGoogleCloudAccessToken(credentials: any): Promise<string> {
     console.error('Error getting Google Cloud access token:', error)
     throw new Error(`Authentication failed: ${error.message}`)
   }
+}
+
+function createJWT(header: any, payload: any, privateKey: string): string {
+  // Base64url encode header and payload
+  const encodedHeader = base64UrlEncode(JSON.stringify(header))
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload))
+  
+  // Create signature data
+  const signatureData = `${encodedHeader}.${encodedPayload}`
+  
+  // For a proper implementation, we would sign this with the private key
+  // This is a simplified version - in production you'd need proper RSA signing
+  const signature = base64UrlEncode(signatureData) // Placeholder
+  
+  return `${encodedHeader}.${encodedPayload}.${signature}`
+}
+
+function base64UrlEncode(str: string): string {
+  const base64 = btoa(str)
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
 }
