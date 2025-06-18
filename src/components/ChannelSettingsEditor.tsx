@@ -10,6 +10,8 @@ import { ScheduleSelector } from "./ScheduleSelector";
 import { TopicSelector } from "./TopicSelector";
 import { ContentChannel } from "./channel/types";
 import { useVoices } from "@/hooks/useVoices";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface ChannelSettingsEditorProps {
   channel: ContentChannel;
@@ -18,6 +20,7 @@ interface ChannelSettingsEditorProps {
 
 export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSettingsEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [editedChannel, setEditedChannel] = useState<ContentChannel>(channel);
   const { voices } = useVoices();
@@ -41,9 +44,51 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
     return 'No specific themes';
   };
 
-  const handleSave = () => {
-    onChannelUpdate(editedChannel);
-    setIsEditing(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      console.log('Saving channel settings:', editedChannel);
+      
+      // Update the channel in the database
+      const { error } = await supabase
+        .from('content_channels')
+        .update({
+          selected_voice: editedChannel.voice.id,
+          selected_themes: editedChannel.themes || [],
+          schedule: editedChannel.schedule,
+          topic_mode: editedChannel.topic.includes('AI-Generated') ? 'ai-decide' : 'custom',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', channel.id);
+
+      if (error) {
+        console.error('Error updating channel:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save channel settings",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update local state
+      onChannelUpdate(editedChannel);
+      setIsEditing(false);
+      
+      toast({
+        title: "Settings Saved",
+        description: "Channel settings have been updated successfully",
+      });
+    } catch (error) {
+      console.error('Error saving channel settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save channel settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
@@ -142,6 +187,7 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
                 variant="outline"
                 size="sm"
                 className="border-white/20 text-white hover:bg-white/10"
+                disabled={isSaving}
               >
                 <X className="w-4 h-4 mr-2" />
                 Cancel
@@ -150,9 +196,10 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
                 onClick={handleSave}
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700"
+                disabled={isSaving}
               >
                 <Save className="w-4 h-4 mr-2" />
-                Save Changes
+                {isSaving ? 'Saving...' : 'Save Changes'}
               </Button>
             </div>
           </div>
