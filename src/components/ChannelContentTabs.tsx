@@ -36,6 +36,11 @@ interface ContentChannel {
   lastGenerated?: string;
   totalVideos: number;
   isActive?: boolean;
+  videoStyle?: {
+    id: string;
+    name: string;
+  };
+  themes?: string[];
 }
 
 interface ChannelContentTabsProps {
@@ -126,6 +131,14 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
     return voice ? voice.type : channel.voice.type;
   };
 
+  // Helper function to display themes
+  const getThemeDisplay = () => {
+    if (channel.themes && channel.themes.length > 0) {
+      return channel.themes.join(', ');
+    }
+    return 'No specific themes';
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
       {/* Channel Header */}
@@ -202,7 +215,7 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
                   <Palette className="w-5 h-5 text-purple-400" />
                   <div>
                     <p className="text-gray-400 text-sm">Theme</p>
-                    <p className="text-white font-medium text-sm md:text-base">{channel.theme.name}</p>
+                    <p className="text-white font-medium text-sm md:text-base">{getThemeDisplay()}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -223,10 +236,10 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
                   </div>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <FileText className="w-5 h-5 text-orange-400" />
+                  <Video className="w-5 h-5 text-orange-400" />
                   <div>
-                    <p className="text-gray-400 text-sm">Topic</p>
-                    <p className="text-white font-medium text-sm md:text-base">{channel.topic}</p>
+                    <p className="text-gray-400 text-sm">Video Style</p>
+                    <p className="text-white font-medium text-sm md:text-base">{channel.videoStyle?.name || channel.theme.name}</p>
                   </div>
                 </div>
               </div>

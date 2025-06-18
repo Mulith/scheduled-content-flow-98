@@ -54,6 +54,7 @@ export abstract class BaseLLMProvider {
       ? channel.selected_topics.join(', ') 
       : channel.selected_topics || 'general productivity and motivation';
 
+    // Include themes from the channel data
     const themes = Array.isArray(channel.selected_themes)
       ? channel.selected_themes.join(', ')
       : channel.selected_themes || '';
@@ -76,8 +77,8 @@ export abstract class BaseLLMProvider {
         break;
     }
 
-    // Add theme guidance
-    const themeGuidance = themes ? `Content Theme: Ensure your content aligns with these themes: ${themes}. Let these themes influence your topic selection, tone, and approach.` : '';
+    // Add theme guidance with more detail
+    const themeGuidance = themes ? `Visual & Style Theme: Your content should align with these visual and stylistic themes: ${themes}. Let these themes influence your visual descriptions, color palettes, mood, tone, and overall aesthetic approach. Consider how these themes affect lighting, composition, and visual elements in your scene descriptions.` : '';
 
     // Add variety and uniqueness instructions
     const varietyInstructions = `
@@ -123,6 +124,7 @@ VISUAL DESCRIPTION REQUIREMENTS:
 - Consider text overlays, graphics, or visual effects
 - Be cinematic and visually compelling
 - Match the visual style to the content format
+${themes ? `- Incorporate the selected themes (${themes}) into visual descriptions, affecting mood, lighting, colors, and overall aesthetic` : ''}
 
 TIMING REQUIREMENTS:
 - Scene timing must add up to exactly ${targetDuration} seconds
@@ -140,7 +142,7 @@ Return your response as valid JSON in this exact format:
       "scene_number": 1,
       "start_time_seconds": 0,
       "end_time_seconds": 8,
-      "visual_description": "Detailed visual description matching the video style...",
+      "visual_description": "Detailed visual description matching the video style and themes...",
       "narration_text": "Script text for this scene..."
     }
   ]

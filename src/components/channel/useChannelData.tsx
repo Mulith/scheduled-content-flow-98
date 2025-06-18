@@ -6,6 +6,18 @@ import { useVoices } from '@/hooks/useVoices';
 import { ContentChannel } from './types';
 import { availableVideoStyles } from './channelConstants';
 
+// Available themes that can be selected during registration
+const availableThemes = [
+  'Minimalist',
+  'Dark & Moody',
+  'Bright & Energetic',
+  'Professional',
+  'Vintage',
+  'Futuristic',
+  'Natural',
+  'Urban'
+];
+
 export const useChannelData = () => {
   const [channels, setChannels] = useState<ContentChannel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,6 +55,12 @@ export const useChannelData = () => {
         // Find the voice from the voices data
         const voiceData = voices.find(v => v.id === dbChannel.selected_voice);
         
+        // Get video style information
+        const videoStyle = availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0]);
+        
+        // Parse themes from selected_themes if it exists, otherwise default to empty array
+        const themes = Array.isArray(dbChannel.selected_themes) ? dbChannel.selected_themes : [];
+        
         return {
           id: dbChannel.id,
           name: dbChannel.name,
@@ -53,8 +71,8 @@ export const useChannelData = () => {
           },
           theme: {
             id: dbChannel.selected_video_types[0] || 'story',
-            name: availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0])?.name || 'Story Format',
-            color: availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0])?.color || 'from-blue-500 to-cyan-500',
+            name: videoStyle?.name || 'Story Format',
+            color: videoStyle?.color || 'from-blue-500 to-cyan-500',
           },
           voice: {
             id: dbChannel.selected_voice,
@@ -67,6 +85,11 @@ export const useChannelData = () => {
           lastGenerated: "Not yet generated",
           totalVideos: 0,
           isActive: dbChannel.is_active || false,
+          videoStyle: {
+            id: dbChannel.selected_video_types[0] || 'story',
+            name: videoStyle?.name || 'Story Format',
+          },
+          themes: themes,
         };
       });
       

@@ -22,5 +22,10 @@ export interface ContentChannel {
   status: "active" | "paused" | "setup";
   lastGenerated?: string;
   totalVideos: number;
-  isActive: boolean;
+  isActive?: boolean;
+  videoStyle?: {
+    id: string;
+    name: string;
+  };
+  themes?: string[];
 }
