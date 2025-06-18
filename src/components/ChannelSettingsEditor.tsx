@@ -19,6 +19,7 @@ interface ChannelSettingsEditorProps {
 export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSettingsEditorProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [playingVoice, setPlayingVoice] = useState<string | null>(null);
+  const [editedChannel, setEditedChannel] = useState<ContentChannel>(channel);
   const { voices } = useVoices();
 
   const handleVoicePreview = (voiceId: string) => {
@@ -38,6 +39,16 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
       return channel.themes.join(', ');
     }
     return 'No specific themes';
+  };
+
+  const handleSave = () => {
+    onChannelUpdate(editedChannel);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setEditedChannel(channel);
+    setIsEditing(false);
   };
 
   const currentVoice = getCurrentVoice();
@@ -127,7 +138,7 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
             <CardTitle className="text-white text-lg">Edit Channel Settings</CardTitle>
             <div className="flex items-center space-x-2">
               <Button
-                onClick={() => setIsEditing(false)}
+                onClick={handleCancel}
                 variant="outline"
                 size="sm"
                 className="border-white/20 text-white hover:bg-white/10"
@@ -136,10 +147,7 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
                 Cancel
               </Button>
               <Button
-                onClick={() => {
-                  // TODO: Implement save functionality
-                  setIsEditing(false);
-                }}
+                onClick={handleSave}
                 size="sm"
                 className="bg-blue-600 hover:bg-blue-700"
               >
@@ -154,10 +162,19 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
           <div>
             <h3 className="text-white font-medium mb-3">AI Voice</h3>
             <VoiceSelectorWithPreview
-              selectedVoice={channel.voice.id}
+              selectedVoice={editedChannel.voice.id}
               onVoiceSelect={(voiceId) => {
-                // TODO: Update channel voice
-                console.log("Voice selected:", voiceId);
+                const selectedVoice = voices.find(v => v.id === voiceId);
+                if (selectedVoice) {
+                  setEditedChannel({
+                    ...editedChannel,
+                    voice: {
+                      id: voiceId,
+                      name: selectedVoice.name,
+                      type: selectedVoice.type
+                    }
+                  });
+                }
               }}
               playingVoice={playingVoice}
               onVoicePreview={handleVoicePreview}
@@ -168,10 +185,12 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
           <div>
             <h3 className="text-white font-medium mb-3">Content Themes</h3>
             <ThemeSelector
-              selectedThemes={channel.themes || []}
-              onThemeChange={(themes) => {
-                // TODO: Update channel themes
-                console.log("Themes selected:", themes);
+              selectedThemes={editedChannel.themes || []}
+              onThemesChange={(themes) => {
+                setEditedChannel({
+                  ...editedChannel,
+                  themes
+                });
               }}
             />
           </div>
@@ -180,10 +199,12 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
           <div>
             <h3 className="text-white font-medium mb-3">Publishing Schedule</h3>
             <ScheduleSelector
-              selectedSchedule={channel.schedule}
-              onScheduleChange={(schedule) => {
-                // TODO: Update channel schedule
-                console.log("Schedule selected:", schedule);
+              selectedSchedule={editedChannel.schedule}
+              onScheduleSelect={(schedule) => {
+                setEditedChannel({
+                  ...editedChannel,
+                  schedule
+                });
               }}
             />
           </div>
@@ -192,16 +213,28 @@ export const ChannelSettingsEditor = ({ channel, onChannelUpdate }: ChannelSetti
           <div>
             <h3 className="text-white font-medium mb-3">Topic Focus</h3>
             <TopicSelector
-              topicMode={channel.topic.includes('AI-Generated') ? 'ai-decide' : 'custom'}
+              topicSelection={editedChannel.topic.includes('AI-Generated') ? 'ai-decide' : 'custom'}
+              onTopicSelectionChange={(selection) => {
+                setEditedChannel({
+                  ...editedChannel,
+                  topic: selection === 'ai-decide' ? 'AI-Generated Topics' : 'Custom Topics'
+                });
+              }}
               selectedTopics={[]}
-              onTopicModeChange={(mode) => {
-                // TODO: Update topic mode
-                console.log("Topic mode selected:", mode);
+              onTopicToggle={(topic) => {
+                console.log("Topic toggled:", topic);
               }}
-              onTopicsChange={(topics) => {
-                // TODO: Update custom topics
-                console.log("Topics selected:", topics);
+              customTopic=""
+              onCustomTopicChange={(topic) => {
+                console.log("Custom topic changed:", topic);
               }}
+              onAddCustomTopic={() => {
+                console.log("Add custom topic");
+              }}
+              onRemoveSelectedTopic={(topic) => {
+                console.log("Remove topic:", topic);
+              }}
+              selectedVideoTypes={[]}
             />
           </div>
         </CardContent>
