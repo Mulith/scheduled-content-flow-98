@@ -62,25 +62,20 @@ serve(async (req) => {
       throw new Error(`Payment not completed. Status: ${session.payment_status}`);
     }
 
-    // Get user from auth header
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("No authorization header provided");
-    }
-
+    // Use service role key to bypass RLS for database operations
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
-    const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
+
+    // Get user_id from session metadata instead of auth header
+    const metadata = session.metadata || {};
+    const userId = metadata.user_id;
     
-    if (userError || !userData.user) {
-      throw new Error("User authentication failed");
+    if (!userId) {
+      throw new Error("User ID not found in session metadata");
     }
 
-    const user = userData.user;
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    logStep("User ID found in metadata", { userId });
 
     // Extract channel data from session metadata
-    const metadata = session.metadata || {};
     const channelData = metadata.channel_data ? JSON.parse(metadata.channel_data) : {};
     
     logStep("Channel data extracted", { metadata, channelData });
@@ -106,7 +101,7 @@ serve(async (req) => {
 
     // Create the channel record
     const channelRecord = {
-      user_id: user.id,
+      user_id: userId,
       name: metadata.channel_name || 'New Channel',
       platform: channelData.platform || 'youtube',
       account_name: channelData.accountName || 'Unknown Account',
@@ -118,6 +113,7 @@ serve(async (req) => {
       selected_voice: channelData.selectedVoice || 'aria',
       topic_mode: channelData.topicMode || 'ai-decide',
       selected_topics: channelData.selectedTopics || [],
+      is_active: true,
     };
 
     logStep("Creating channel record", channelRecord);

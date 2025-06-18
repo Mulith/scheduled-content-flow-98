@@ -32,6 +32,7 @@ const Success = () => {
       console.log('Session ID:', sessionId);
 
       // Call the edge function to verify payment and create channel
+      // Don't pass authorization header since we'll use the user_id from session metadata
       const { data, error } = await supabase.functions.invoke('verify-payment-and-create-channel', {
         body: { sessionId }
       });
@@ -43,7 +44,7 @@ const Success = () => {
         throw new Error(error.message || 'Failed to verify payment');
       }
 
-      if (data.success) {
+      if (data && data.success) {
         setStatus('success');
         setMessage('Your subscription has been activated and channel created successfully!');
         
@@ -52,7 +53,7 @@ const Success = () => {
           description: `Your "${data.channel.name}" channel is now active and ready to generate content.`,
         });
       } else {
-        throw new Error(data.error || 'Payment verification failed');
+        throw new Error(data?.error || 'Payment verification failed');
       }
 
     } catch (error) {
