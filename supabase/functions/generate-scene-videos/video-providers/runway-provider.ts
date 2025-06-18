@@ -25,7 +25,6 @@ export class RunwayVideoProvider extends BaseVideoProvider {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
-          'X-Runway-Version': '2024-09-13'
         },
         body: JSON.stringify({
           model: 'gen3a_turbo',
