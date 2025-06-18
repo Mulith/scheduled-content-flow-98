@@ -29,7 +29,8 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
     isLoading, 
     setChannels, 
     handleDeleteChannel, 
-    handleToggleStatus 
+    handleToggleStatus,
+    getUsedYouTubeChannels
   } = useChannelData();
 
   useEffect(() => {
@@ -101,6 +102,7 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
 
   const handleChannelDelete = (channelId: string) => {
     handleDeleteChannel(channelId);
+    // Reload the channels after deletion to get fresh data
     const updatedChannels = channels.filter(c => c.id !== channelId);
     onChannelsUpdate?.(updatedChannels);
   };
@@ -155,13 +157,14 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
               </DialogDescription>
             </DialogHeader>
             
-            <ChannelCreation
+            <ChannelCreationWithUsedChannels
               isDialog={true}
               onClose={() => setIsCreateDialogOpen(false)}
               onSubmit={handleChannelFormSubmit}
               isCreating={isCreatingChannel}
               playingVoice={playingVoice}
               onVoicePreview={setPlayingVoice}
+              usedYouTubeChannels={getUsedYouTubeChannels()}
             />
           </DialogContent>
         </Dialog>
@@ -176,4 +179,9 @@ export const ContentChannels = ({ onChannelsUpdate, onChannelSelect }: ContentCh
       />
     </div>
   );
+};
+
+// Wrapper component to pass used channels to ChannelCreation
+const ChannelCreationWithUsedChannels = ({ usedYouTubeChannels, ...props }: any) => {
+  return <ChannelCreation {...props} />;
 };

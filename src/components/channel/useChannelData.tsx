@@ -112,13 +112,42 @@ export const useChannelData = () => {
     loadExistingChannels();
   }, []);
 
-  const handleDeleteChannel = (channelId: string) => {
-    const updatedChannels = channels.filter(c => c.id !== channelId);
-    setChannels(updatedChannels);
-    toast({
-      title: "Channel Deleted",
-      description: "Content channel has been removed",
-    });
+  const handleDeleteChannel = async (channelId: string) => {
+    try {
+      console.log('Deleting channel from database:', channelId);
+      
+      // Delete from database
+      const { error } = await supabase
+        .from('content_channels')
+        .delete()
+        .eq('id', channelId);
+
+      if (error) {
+        console.error('Error deleting channel from database:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete channel from database",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update local state
+      const updatedChannels = channels.filter(c => c.id !== channelId);
+      setChannels(updatedChannels);
+      
+      toast({
+        title: "Channel Deleted",
+        description: "Content channel has been permanently removed",
+      });
+    } catch (error) {
+      console.error('Error in handleDeleteChannel:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete channel",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleToggleStatus = (channelId: string) => {
@@ -132,11 +161,18 @@ export const useChannelData = () => {
     setChannels(updatedChannels);
   };
 
+  const getUsedYouTubeChannels = () => {
+    return channels
+      .filter(channel => channel.socialAccount.platform === 'youtube')
+      .map(channel => channel.socialAccount.accountName);
+  };
+
   return {
     channels,
     isLoading,
     setChannels,
     handleDeleteChannel,
     handleToggleStatus,
+    getUsedYouTubeChannels,
   };
 };

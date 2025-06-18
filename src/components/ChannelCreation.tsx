@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,6 +61,12 @@ export const ChannelCreation = ({
   const loadConnectedChannels = async () => {
     const youtubeChannels = await fetchConnectedChannels();
     setConnectedYouTubeChannels(youtubeChannels);
+  };
+
+  // Function to get used YouTube channels (this would come from parent component)
+  const getUsedYouTubeChannels = () => {
+    // This should be passed from parent component that has access to existing channels
+    return [];
   };
 
   const handleVideoTypeToggle = (videoTypeId: string) => {
@@ -169,6 +174,7 @@ export const ChannelCreation = ({
         onAccountChange={setAccountName}
         connectedYouTubeChannels={connectedYouTubeChannels}
         mockTikTokAccounts={mockTikTokAccounts}
+        usedYouTubeChannels={getUsedYouTubeChannels()}
       />
 
       <VideoStyleSelector 

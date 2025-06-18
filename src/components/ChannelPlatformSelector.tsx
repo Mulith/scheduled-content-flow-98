@@ -10,6 +10,7 @@ interface ChannelPlatformSelectorProps {
   onAccountChange: (account: string) => void;
   connectedYouTubeChannels: any[];
   mockTikTokAccounts: string[];
+  usedYouTubeChannels?: string[];
 }
 
 export const ChannelPlatformSelector = ({
@@ -18,22 +19,28 @@ export const ChannelPlatformSelector = ({
   onPlatformChange,
   onAccountChange,
   connectedYouTubeChannels,
-  mockTikTokAccounts
+  mockTikTokAccounts,
+  usedYouTubeChannels = []
 }: ChannelPlatformSelectorProps) => {
   const getAvailableAccounts = () => {
     if (!platform) return [];
     
     if (platform === 'youtube') {
-      return connectedYouTubeChannels.map(channel => ({
-        id: channel.channel_id,
-        name: channel.channel_name,
-        handle: channel.channel_handle,
-        thumbnail: channel.thumbnail_url,
-      }));
+      // Filter out YouTube channels that are already used
+      return connectedYouTubeChannels
+        .filter(channel => !usedYouTubeChannels.includes(channel.channel_name))
+        .map(channel => ({
+          id: channel.channel_id,
+          name: channel.channel_name,
+          handle: channel.channel_handle,
+          thumbnail: channel.thumbnail_url,
+        }));
     }
     
     return mockTikTokAccounts.map(account => ({ id: account, name: account, handle: account }));
   };
+
+  const availableAccounts = getAvailableAccounts();
 
   return (
     <div className="grid grid-cols-2 gap-4">
@@ -75,25 +82,29 @@ export const ChannelPlatformSelector = ({
           </SelectTrigger>
           <SelectContent className="bg-gray-800 border-gray-600">
             {platform === 'youtube' ? (
-              connectedYouTubeChannels.length > 0 ? (
-                connectedYouTubeChannels.map((channel) => (
-                  <SelectItem key={channel.channel_id} value={channel.channel_name} className="text-white hover:bg-gray-700 focus:bg-gray-700">
+              availableAccounts.length > 0 ? (
+                availableAccounts.map((channel) => (
+                  <SelectItem key={channel.id} value={channel.name} className="text-white hover:bg-gray-700 focus:bg-gray-700">
                     <div className="flex items-center space-x-2">
-                      {channel.thumbnail_url && (
-                        <img src={channel.thumbnail_url} alt="" className="w-4 h-4 rounded-full" />
+                      {channel.thumbnail && (
+                        <img src={channel.thumbnail} alt="" className="w-4 h-4 rounded-full" />
                       )}
-                      <span>{channel.channel_name}</span>
-                      <span className="text-xs text-gray-400">({channel.channel_handle})</span>
+                      <span>{channel.name}</span>
+                      <span className="text-xs text-gray-400">({channel.handle})</span>
                     </div>
                   </SelectItem>
                 ))
-              ) : (
+              ) : connectedYouTubeChannels.length === 0 ? (
                 <SelectItem value="no-accounts" disabled className="text-gray-400">
                   No YouTube channels connected
                 </SelectItem>
+              ) : (
+                <SelectItem value="all-used" disabled className="text-gray-400">
+                  All YouTube channels already in use
+                </SelectItem>
               )
             ) : (
-              getAvailableAccounts().map((account) => (
+              availableAccounts.map((account) => (
                 <SelectItem key={account.id} value={account.name} className="text-white hover:bg-gray-700 focus:bg-gray-700">
                   {account.name}
                 </SelectItem>
@@ -104,6 +115,11 @@ export const ChannelPlatformSelector = ({
         {platform === 'youtube' && connectedYouTubeChannels.length === 0 && (
           <p className="text-xs text-yellow-400">
             No YouTube channels connected. Go to Social Accounts to connect your YouTube channel first.
+          </p>
+        )}
+        {platform === 'youtube' && connectedYouTubeChannels.length > 0 && availableAccounts.length === 0 && (
+          <p className="text-xs text-yellow-400">
+            All connected YouTube channels are already assigned to content channels.
           </p>
         )}
         {platform === 'tiktok' && (
