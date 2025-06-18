@@ -8,6 +8,7 @@ import { ContentCalendar } from "@/components/ContentCalendar";
 import { VoiceSelectorWithPreview } from "@/components/VoiceSelectorWithPreview";
 import { ColorCustomizer } from "@/components/ColorCustomizer";
 import { ScriptPreview } from "@/components/ScriptPreview";
+import { ChannelSettingsEditor } from "@/components/ChannelSettingsEditor";
 import { useVoices } from "@/hooks/useVoices";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -50,17 +51,8 @@ interface ChannelContentTabsProps {
 
 export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentTabsProps) => {
   const [activeSubTab, setActiveSubTab] = useState("overview");
-  const [playingVoice, setPlayingVoice] = useState<string | null>(null);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const { voices } = useVoices();
-
-  const handleVoicePreview = (voiceId: string) => {
-    if (playingVoice === voiceId) {
-      setPlayingVoice(null);
-      return;
-    }
-    setPlayingVoice(voiceId);
-  };
 
   const handleActiveToggle = async (isActive: boolean) => {
     setIsUpdatingStatus(true);
@@ -321,25 +313,12 @@ export const ChannelContentTabs = ({ channel, onChannelUpdate }: ChannelContentT
               </CardContent>
             </Card>
 
-            <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
-              <CardHeader>
-                <CardTitle className="text-white text-lg md:text-xl">Voice Settings</CardTitle>
-                <CardDescription className="text-gray-400 text-sm md:text-base">
-                  Configure AI voice for narration
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <VoiceSelectorWithPreview
-                  selectedVoice={channel.voice.id}
-                  onVoiceSelect={(voiceId) => {
-                    // Handle voice selection update
-                    console.log("Voice selected:", voiceId);
-                  }}
-                  playingVoice={playingVoice}
-                  onVoicePreview={handleVoicePreview}
-                />
-              </CardContent>
-            </Card>
+            <div className="space-y-4 md:space-y-6">
+              <ChannelSettingsEditor 
+                channel={channel} 
+                onChannelUpdate={(updatedChannel) => onChannelUpdate([updatedChannel])} 
+              />
+            </div>
           </div>
         </TabsContent>
       </Tabs>
