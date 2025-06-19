@@ -10,11 +10,11 @@ import { formatDuration } from "./utils";
 interface ScriptHeaderProps {
   contentItem: ContentItem;
   scenes: Scene[];
-  onGenerateVideos: () => void;
+  onGenerateContent: () => void;
   isGenerating: boolean;
 }
 
-export const ScriptHeader = ({ contentItem, scenes, onGenerateVideos, isGenerating }: ScriptHeaderProps) => {
+export const ScriptHeader = ({ contentItem, scenes, onGenerateContent, isGenerating }: ScriptHeaderProps) => {
   return (
     <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
       <CardHeader>
@@ -48,11 +48,11 @@ export const ScriptHeader = ({ contentItem, scenes, onGenerateVideos, isGenerati
             </Button>
             <Button 
               className="bg-green-600 hover:bg-green-700" 
-              onClick={onGenerateVideos}
+              onClick={onGenerateContent}
               disabled={isGenerating}
             >
               <Play className="w-4 h-4 mr-2" />
-              {isGenerating ? "Generating..." : "Generate Videos"}
+              {isGenerating ? "Generating..." : "Generate Content"}
             </Button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Video, Clock, AlertCircle } from "lucide-react";
+import { Image, Clock, AlertCircle } from "lucide-react";
 import { ContentItem, StoryboardItem } from "./types";
 
 interface StoryboardProps {
@@ -17,7 +17,7 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
       scene: item.scene,
       status: item.videoStatus,
       hasUrl: !!item.videoUrl,
-      videoUrl: item.videoUrl, // Log the actual URL
+      videoUrl: item.videoUrl,
       urlType: typeof item.videoUrl,
       urlLength: item.videoUrl?.length,
       error: item.errorMessage
@@ -29,7 +29,7 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
       <CardHeader>
         <CardTitle className="text-white">Visual Storyboard</CardTitle>
         <CardDescription className="text-gray-400">
-          AI-generated visual descriptions and video content
+          AI-generated visual descriptions and dynamic images
         </CardDescription>
         {contentItem.video_status && (
           <div className="flex items-center space-x-2">
@@ -58,34 +58,25 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
               <CardContent className="p-3">
                 <div className="aspect-video bg-gradient-to-br from-gray-700 to-gray-800 rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
                   {board.videoUrl && board.videoStatus === 'completed' ? (
-                    <video 
+                    <img 
                       src={board.videoUrl} 
+                      alt={`Scene ${board.scene}`}
                       className="w-full h-full object-cover rounded-lg"
-                      controls
-                      muted
-                      preload="metadata"
                       onError={(e) => {
-                        console.error('❌ Video load error for scene', board.scene, '- URL:', board.videoUrl, 'Error:', e);
-                        console.error('❌ Video element error details:', {
+                        console.error('❌ Image load error for scene', board.scene, '- URL:', board.videoUrl, 'Error:', e);
+                        console.error('❌ Image element error details:', {
                           src: e.currentTarget.src,
-                          networkState: e.currentTarget.networkState,
-                          readyState: e.currentTarget.readyState,
-                          error: e.currentTarget.error
+                          naturalWidth: e.currentTarget.naturalWidth,
+                          naturalHeight: e.currentTarget.naturalHeight
                         });
                       }}
-                      onLoadStart={() => {
-                        console.log('▶️ Video loading started for scene', board.scene, '- URL:', board.videoUrl);
-                      }}
-                      onLoadedData={() => {
-                        console.log('✅ Video loaded successfully for scene', board.scene);
-                      }}
-                      onCanPlay={() => {
-                        console.log('🎯 Video can start playing for scene', board.scene);
+                      onLoad={() => {
+                        console.log('✅ Image loaded successfully for scene', board.scene);
                       }}
                     />
                   ) : board.videoStatus === 'generating' ? (
                     <div className="flex flex-col items-center space-y-2">
-                      <Video className="w-6 h-6 text-blue-400 animate-pulse" />
+                      <Image className="w-6 h-6 text-blue-400 animate-pulse" />
                       <span className="text-xs text-blue-400">Generating...</span>
                       <Clock className="w-4 h-4 text-blue-300 animate-spin" />
                     </div>
@@ -96,7 +87,7 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
                     </div>
                   ) : (
                     <div className="flex flex-col items-center space-y-2">
-                      <Video className="w-6 h-6 text-gray-400" />
+                      <Image className="w-6 h-6 text-gray-400" />
                       <span className="text-gray-400 text-sm text-center">Scene {board.scene}</span>
                       <span className="text-gray-500 text-xs">Not started</span>
                     </div>
@@ -132,7 +123,7 @@ export const Storyboard = ({ contentItem, storyboard }: StoryboardProps) => {
                 {board.videoUrl && (
                   <div className="mt-1">
                     <p className="text-green-400 text-xs truncate" title={board.videoUrl}>
-                      ✓ Video URL: {board.videoUrl.length > 30 ? board.videoUrl.substring(0, 30) + '...' : board.videoUrl}
+                      ✓ Image URL: {board.videoUrl.length > 30 ? board.videoUrl.substring(0, 30) + '...' : board.videoUrl}
                     </p>
                     <p className="text-blue-400 text-xs">
                       Status: {board.videoStatus} | Length: {board.videoUrl.length} chars

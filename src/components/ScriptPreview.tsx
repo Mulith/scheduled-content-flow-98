@@ -17,7 +17,7 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
   const [selectedScene, setSelectedScene] = useState(1);
   const { generateVideos, isGenerating } = useVideoGeneration();
 
-  const handleGenerateVideos = () => {
+  const handleGenerateContent = () => {
     generateVideos.mutate(contentItem.id);
   };
 
@@ -47,13 +47,13 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold text-white mb-2">Script Preview</h2>
-        <p className="text-gray-400">Review and edit your AI-generated video script</p>
+        <p className="text-gray-400">Review and edit your AI-generated content script</p>
       </div>
 
       <ScriptHeader 
         contentItem={contentItem}
         scenes={scenes}
-        onGenerateVideos={handleGenerateVideos}
+        onGenerateContent={handleGenerateContent}
         isGenerating={isGenerating}
       />
 

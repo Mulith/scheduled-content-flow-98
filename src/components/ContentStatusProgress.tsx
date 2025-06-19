@@ -21,7 +21,8 @@ export const ContentStatusProgress = ({
   
   const stages = [
     { key: 'script_generation', label: 'Script & Scenes', status: scriptStatus },
-    { key: 'video_creation', label: 'Video Content', status: videoStatus },
+    { key: 'video_creation', label: 'Visual Content', status: videoStatus },
+    { key: 'image_creation', label: 'Visual Content', status: videoStatus },
     { key: 'music_creation', label: 'Music', status: musicStatus },
     { key: 'post_generation', label: 'Final Post', status: postStatus },
   ];
@@ -53,6 +54,11 @@ export const ContentStatusProgress = ({
     return (completedStages / stages.length) * 100;
   };
 
+  // Filter out duplicate stages (video_creation and image_creation are the same)
+  const filteredStages = stages.filter(stage => 
+    !(stage.key === 'image_creation' && stages.some(s => s.key === 'video_creation'))
+  );
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -63,7 +69,7 @@ export const ContentStatusProgress = ({
       <Progress value={getOverallProgress()} className="h-2" />
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {stages.map((stage, index) => {
+        {filteredStages.map((stage, index) => {
           const isActive = stage.key === generationStage;
           const isPast = index < getCurrentStageIndex();
           
