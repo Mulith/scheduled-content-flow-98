@@ -19,65 +19,106 @@ export class GeminiImageProvider extends BaseImageProvider {
       
       console.log(`🎨 Generating image with Gemini Vertex AI: ${request.prompt.substring(0, 100)}...`);
 
-      // Using Vertex AI endpoint for Imagen 3
-      const projectId = 'your-project-id'; // This should be configured
-      const location = 'us-central1'; // or your preferred region
+      // Try Vertex AI first if we have service account credentials
+      const serviceAccountKey = Deno.env.get('GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY');
+      const projectId = Deno.env.get('GOOGLE_CLOUD_PROJECT_ID') || 'your-project-id';
       
-      // For now, let's try the direct Vertex AI REST API
-      const response = await fetch(`https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/imagen-3.0-generate-001:predict`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          instances: [
-            {
-              prompt: request.prompt
-            }
-          ],
-          parameters: {
-            aspectRatio: request.aspectRatio || '16:9',
-            negativePrompt: 'blurry, low quality, distorted, watermark, text, signature',
-            sampleCount: 1,
-            mode: 'speed',
-            safetyFilterLevel: 'BLOCK_ONLY_HIGH'
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Vertex AI Gemini API error: ${response.status} - ${errorText}`);
-        
-        // Fall back to the original Generative Language API if Vertex AI fails
-        console.log('🔄 Falling back to Generative Language API...');
-        return await this.generateImageWithGenerativeAPI(request);
-      }
-
-      const result = await response.json();
-      console.log('✅ Vertex AI Gemini image generation response received');
-
-      if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
-        // Convert base64 to data URL
-        const imageData = result.predictions[0].bytesBase64Encoded;
-        const imageUrl = `data:image/png;base64,${imageData}`;
-        console.log(`✅ Generated image (base64 length: ${imageData.length})`);
-        
-        return {
-          success: true,
-          imageUrl: imageUrl,
-          providerId: this.id
-        };
+      if (serviceAccountKey && projectId !== 'your-project-id') {
+        try {
+          return await this.generateImageWithVertexAI(request, serviceAccountKey, projectId);
+        } catch (vertexError) {
+          console.error('Vertex AI failed, falling back to Generative Language API:', vertexError);
+        }
       } else {
-        throw new Error('No image data received from Vertex AI Gemini API');
+        console.log('⚠️ Vertex AI credentials not configured, using Generative Language API');
       }
+
+      // Fall back to Generative Language API
+      return await this.generateImageWithGenerativeAPI(request);
 
     } catch (error) {
-      console.error('Vertex AI Gemini image generation error:', error);
-      console.log('🔄 Falling back to Generative Language API...');
-      return await this.generateImageWithGenerativeAPI(request);
+      console.error('Gemini image generation error:', error);
+      return {
+        success: false,
+        error: error.message,
+        providerId: this.id
+      };
     }
+  }
+
+  private async generateImageWithVertexAI(request: ImageGenerationRequest, serviceAccountKey: string, projectId: string): Promise<ImageGenerationResponse> {
+    // Parse the service account key
+    const serviceAccount = JSON.parse(serviceAccountKey);
+    
+    // Get OAuth2 access token
+    const accessToken = await this.getVertexAIAccessToken(serviceAccount);
+    
+    const location = 'us-central1'; // You can make this configurable
+    
+    const response = await fetch(`https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/imagen-3.0-generate-001:predict`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        instances: [
+          {
+            prompt: request.prompt
+          }
+        ],
+        parameters: {
+          aspectRatio: request.aspectRatio || '16:9',
+          negativePrompt: 'blurry, low quality, distorted, watermark, text, signature',
+          sampleCount: 1,
+          mode: 'speed',
+          safetyFilterLevel: 'BLOCK_ONLY_HIGH'
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Vertex AI API error: ${response.status} - ${errorText}`);
+      throw new Error(`Vertex AI API error: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('✅ Vertex AI image generation response received');
+
+    if (result.predictions && result.predictions[0]?.bytesBase64Encoded) {
+      const imageData = result.predictions[0].bytesBase64Encoded;
+      const imageUrl = `data:image/png;base64,${imageData}`;
+      console.log(`✅ Generated image with Vertex AI (base64 length: ${imageData.length})`);
+      
+      return {
+        success: true,
+        imageUrl: imageUrl,
+        providerId: this.id
+      };
+    } else {
+      throw new Error('No image data received from Vertex AI');
+    }
+  }
+
+  private async getVertexAIAccessToken(serviceAccount: any): Promise<string> {
+    // Create JWT for Google OAuth2
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      iss: serviceAccount.client_email,
+      scope: 'https://www.googleapis.com/auth/cloud-platform',
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: now + 3600,
+      iat: now,
+    };
+
+    // Simple JWT encoding (for production, consider using a proper JWT library)
+    const header = btoa(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+    const payloadStr = btoa(JSON.stringify(payload));
+    
+    // For now, we'll use the API key approach as JWT signing is complex
+    // In a real implementation, you'd need to properly sign the JWT with the private key
+    throw new Error('Vertex AI OAuth2 not fully implemented - falling back to Generative Language API');
   }
 
   private async generateImageWithGenerativeAPI(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
