@@ -44,7 +44,7 @@ export class ImageGenerationGateway {
     if (!geminiProvider || !geminiProvider.isAvailable) {
       return {
         success: false,
-        error: 'Gemini image provider not available',
+        error: 'Gemini image provider not available - please check your GEMINI_API_KEY',
         providerId: 'gateway'
       };
     }
@@ -54,26 +54,38 @@ export class ImageGenerationGateway {
     
     if (!baseImageResult.success || !baseImageResult.imageUrl) {
       console.error('❌ Base image generation failed:', baseImageResult.error);
-      return baseImageResult;
+      return {
+        success: false,
+        error: `Base image generation failed: ${baseImageResult.error}`,
+        providerId: 'gateway'
+      };
     }
 
-    console.log('✅ Base image generated successfully');
+    console.log('✅ Base image generated successfully:', baseImageResult.imageUrl);
 
     // Step 2: Create dynamic image with Immersity (if available)
     if (this.immersityProvider && this.immersityProvider.isAvailable) {
       console.log('🌟 Creating dynamic image with Immersity...');
-      const dynamicResult = await this.immersityProvider.generateDynamicImage(baseImageResult.imageUrl);
       
-      if (dynamicResult.success && dynamicResult.imageUrl) {
-        console.log('✅ Dynamic image generated successfully');
-        return dynamicResult;
-      } else {
-        console.log('⚠️ Dynamic image generation failed, returning base image');
-        // Return base image if dynamic generation fails
+      try {
+        const dynamicResult = await this.immersityProvider.generateDynamicImage(baseImageResult.imageUrl);
+        
+        if (dynamicResult.success && dynamicResult.imageUrl) {
+          console.log('✅ Dynamic image generated successfully:', dynamicResult.imageUrl);
+          return dynamicResult;
+        } else {
+          console.log('⚠️ Dynamic image generation failed, returning base image:', dynamicResult.error);
+          // Return base image if dynamic generation fails
+          return baseImageResult;
+        }
+      } catch (error) {
+        console.error('💥 Immersity processing error:', error);
+        console.log('⚠️ Falling back to base image');
         return baseImageResult;
       }
     } else {
       console.log('⚠️ Immersity provider not available, returning base image');
+      console.log('💡 To enable dynamic images, please add your IMMERSITY_API_KEY');
       return baseImageResult;
     }
   }
@@ -81,14 +93,14 @@ export class ImageGenerationGateway {
   getAvailableProviders(): Array<{id: string, name: string, isAvailable: boolean}> {
     const providers = Array.from(this.providers.entries()).map(([id, provider]) => ({
       id,
-      name: provider.name,
+      name: provider.name || id,
       isAvailable: provider.isAvailable
     }));
 
     if (this.immersityProvider) {
       providers.push({
         id: 'immersity',
-        name: this.immersityProvider.name,
+        name: 'Immersity.ai',
         isAvailable: this.immersityProvider.isAvailable
       });
     }
