@@ -27,15 +27,10 @@ serve(async (req) => {
 
     console.log(`🎬 Starting scene generation for content item: ${contentItemId}`)
 
-    // Get content item with channel info to check generation type
+    // Get content item - simplified query without the non-existent column
     const { data: contentItem, error: contentError } = await supabase
       .from('content_items')
-      .select(`
-        *,
-        content_channels (
-          content_generation_type
-        )
-      `)
+      .select('*')
       .eq('id', contentItemId)
       .single()
 
@@ -44,29 +39,21 @@ serve(async (req) => {
       throw new Error(`Error fetching content item: ${contentError.message}`)
     }
 
-    const generationType = contentItem.content_channels?.content_generation_type || 'dynamic_image'
+    // Default to dynamic image generation since the column doesn't exist
+    const generationType = 'dynamic_image'
     console.log(`📋 Generation type: ${generationType}`)
 
-    // Initialize appropriate gateway
-    const useVideoGeneration = generationType === 'video'
-    const videoGateway = useVideoGeneration ? new VideoGenerationGateway() : null
-    const imageGateway = !useVideoGeneration ? new ImageGenerationGateway() : null
+    // Initialize image gateway for dynamic image generation
+    const imageGateway = new ImageGenerationGateway()
 
-    if (useVideoGeneration) {
-      const availableProviders = videoGateway!.getAvailableProviders()
-      const config = videoGateway!.getCurrentConfiguration()
-      console.log(`📋 Available video providers:`, availableProviders)
-      console.log(`⚙️ Current video configuration:`, config)
-    } else {
-      const availableProviders = imageGateway!.getAvailableProviders()
-      console.log(`📋 Available image providers:`, availableProviders)
-    }
+    const availableProviders = imageGateway.getAvailableProviders()
+    console.log(`📋 Available image providers:`, availableProviders)
 
     // Update content item status
     const { error: updateError } = await supabase
       .from('content_items')
       .update({ 
-        generation_stage: useVideoGeneration ? 'video_creation' : 'image_creation',
+        generation_stage: 'image_creation',
         video_status: 'in_progress',
         updated_by_system: new Date().toISOString()
       })
@@ -92,15 +79,15 @@ serve(async (req) => {
       throw new Error('No scenes found for content item')
     }
 
-    console.log(`📝 Found ${scenes.length} scenes to generate ${useVideoGeneration ? 'videos' : 'images'} for`)
+    console.log(`📝 Found ${scenes.length} scenes to generate images for`)
 
     let successCount = 0
     let failCount = 0
 
-    // Generate content for each scene
+    // Generate images for each scene
     for (const scene of scenes) {
       try {
-        console.log(`🎥 Generating ${useVideoGeneration ? 'video' : 'image'} for scene ${scene.scene_number} (ID: ${scene.id})`)
+        console.log(`🎨 Generating image for scene ${scene.scene_number} (ID: ${scene.id})`)
 
         // Check if scene video already exists
         const { data: existingVideo } = await supabase
@@ -143,40 +130,26 @@ serve(async (req) => {
           }
         }
 
-        let result;
-        
-        if (useVideoGeneration) {
-          // Generate video using the video gateway
-          result = await videoGateway!.generateVideo({
-            prompt: scene.visual_description,
-            duration: scene.end_time_seconds - scene.start_time_seconds,
-            aspectRatio: '16:9',
-            quality: 'standard'
-          })
-        } else {
-          // Generate dynamic image using the image gateway
-          result = await imageGateway!.generateDynamicImage({
-            prompt: scene.visual_description,
-            aspectRatio: '16:9',
-            quality: 'standard'
-          })
-        }
+        // Generate dynamic image using the image gateway
+        const result = await imageGateway.generateDynamicImage({
+          prompt: scene.visual_description,
+          aspectRatio: '16:9',
+          quality: 'standard'
+        })
 
         console.log(`📊 Generation result for scene ${scene.scene_number}:`, {
           success: result.success,
-          hasUrl: !!(result.videoUrl || result.imageUrl),
+          hasUrl: !!result.imageUrl,
           providerId: result.providerId,
           error: result.error
         })
 
-        const mediaUrl = result.videoUrl || result.imageUrl;
-
-        if (result.success && mediaUrl) {
-          // Update scene video with generated content URL
+        if (result.success && result.imageUrl) {
+          // Update scene video with generated image URL
           const { error: updateVideoError } = await supabase
             .from('content_scene_videos')
             .update({
-              video_url: mediaUrl,
+              video_url: result.imageUrl,
               video_status: 'completed',
               completed_at: new Date().toISOString()
             })
@@ -221,7 +194,7 @@ serve(async (req) => {
 
     // Update content item final status
     const finalVideoStatus = allCompleted ? 'completed' : anyFailed ? 'failed' : 'in_progress'
-    const nextStage = allCompleted ? 'music_creation' : (useVideoGeneration ? 'video_creation' : 'image_creation')
+    const nextStage = allCompleted ? 'music_creation' : 'image_creation'
 
     await supabase
       .from('content_items')
@@ -239,8 +212,8 @@ serve(async (req) => {
       contentItemId,
       generationType,
       scenesProcessed: scenes.length,
-      mediaGenerated: successCount,
-      mediaFailed: failCount,
+      imagesGenerated: successCount,
+      imagesFailed: failCount,
       allCompleted,
       anyFailed
     }), {
