@@ -2,13 +2,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { VideoGenerationGateway } from './video-gateway.ts'
+import { ImageGenerationGateway } from './image-gateway.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface SceneVideoRequest {
+interface SceneGenerationRequest {
   contentItemId: string;
 }
 
@@ -22,23 +23,50 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
-    const { contentItemId } = await req.json() as SceneVideoRequest
+    const { contentItemId } = await req.json() as SceneGenerationRequest
 
-    console.log(`🎬 Starting video generation for content item: ${contentItemId}`)
+    console.log(`🎬 Starting scene generation for content item: ${contentItemId}`)
 
-    // Initialize video generation gateway
-    const videoGateway = new VideoGenerationGateway()
-    const availableProviders = videoGateway.getAvailableProviders()
-    const config = videoGateway.getCurrentConfiguration()
-    
-    console.log(`📋 Available video providers:`, availableProviders)
-    console.log(`⚙️ Current configuration:`, config)
+    // Get content item with channel info to check generation type
+    const { data: contentItem, error: contentError } = await supabase
+      .from('content_items')
+      .select(`
+        *,
+        content_channels (
+          content_generation_type
+        )
+      `)
+      .eq('id', contentItemId)
+      .single()
 
-    // Update content item status to video creation in progress
+    if (contentError) {
+      console.error('Error fetching content item:', contentError)
+      throw new Error(`Error fetching content item: ${contentError.message}`)
+    }
+
+    const generationType = contentItem.content_channels?.content_generation_type || 'dynamic_image'
+    console.log(`📋 Generation type: ${generationType}`)
+
+    // Initialize appropriate gateway
+    const useVideoGeneration = generationType === 'video'
+    const videoGateway = useVideoGeneration ? new VideoGenerationGateway() : null
+    const imageGateway = !useVideoGeneration ? new ImageGenerationGateway() : null
+
+    if (useVideoGeneration) {
+      const availableProviders = videoGateway!.getAvailableProviders()
+      const config = videoGateway!.getCurrentConfiguration()
+      console.log(`📋 Available video providers:`, availableProviders)
+      console.log(`⚙️ Current video configuration:`, config)
+    } else {
+      const availableProviders = imageGateway!.getAvailableProviders()
+      console.log(`📋 Available image providers:`, availableProviders)
+    }
+
+    // Update content item status
     const { error: updateError } = await supabase
       .from('content_items')
       .update({ 
-        generation_stage: 'video_creation',
+        generation_stage: useVideoGeneration ? 'video_creation' : 'image_creation',
         video_status: 'in_progress',
         updated_by_system: new Date().toISOString()
       })
@@ -64,16 +92,15 @@ serve(async (req) => {
       throw new Error('No scenes found for content item')
     }
 
-    console.log(`📝 Found ${scenes.length} scenes to generate videos for:`, scenes.map(s => ({ id: s.id, scene_number: s.scene_number, visual: s.visual_description.substring(0, 50) + '...' })))
+    console.log(`📝 Found ${scenes.length} scenes to generate ${useVideoGeneration ? 'videos' : 'images'} for`)
 
     let successCount = 0
     let failCount = 0
 
-    // Generate video for each scene
+    // Generate content for each scene
     for (const scene of scenes) {
       try {
-        console.log(`🎥 Generating video for scene ${scene.scene_number} (ID: ${scene.id})`)
-        console.log(`📝 Visual description: ${scene.visual_description}`)
+        console.log(`🎥 Generating ${useVideoGeneration ? 'video' : 'image'} for scene ${scene.scene_number} (ID: ${scene.id})`)
 
         // Check if scene video already exists
         const { data: existingVideo } = await supabase
@@ -103,10 +130,7 @@ serve(async (req) => {
           }
 
           sceneVideoId = sceneVideo.id
-          console.log(`✅ Created scene video record with ID: ${sceneVideoId}`)
         } else {
-          console.log(`📋 Found existing scene video record with ID: ${sceneVideoId}`)
-          
           // Update status to generating if not already completed
           if (existingVideo.video_status !== 'completed') {
             await supabase
@@ -119,62 +143,64 @@ serve(async (req) => {
           }
         }
 
-        // Generate video using the gateway
-        console.log(`🎬 Calling video gateway for scene ${scene.scene_number}...`)
-        const videoResult = await videoGateway.generateVideo({
-          prompt: scene.visual_description,
-          duration: scene.end_time_seconds - scene.start_time_seconds,
-          aspectRatio: '16:9',
-          quality: 'standard'
+        let result;
+        
+        if (useVideoGeneration) {
+          // Generate video using the video gateway
+          result = await videoGateway!.generateVideo({
+            prompt: scene.visual_description,
+            duration: scene.end_time_seconds - scene.start_time_seconds,
+            aspectRatio: '16:9',
+            quality: 'standard'
+          })
+        } else {
+          // Generate dynamic image using the image gateway
+          result = await imageGateway!.generateDynamicImage({
+            prompt: scene.visual_description,
+            aspectRatio: '16:9',
+            quality: 'standard'
+          })
+        }
+
+        console.log(`📊 Generation result for scene ${scene.scene_number}:`, {
+          success: result.success,
+          hasUrl: !!(result.videoUrl || result.imageUrl),
+          providerId: result.providerId,
+          error: result.error
         })
 
-        console.log(`📊 Video generation result for scene ${scene.scene_number}:`, {
-          success: videoResult.success,
-          hasUrl: !!videoResult.videoUrl,
-          providerId: videoResult.providerId,
-          urlLength: videoResult.videoUrl?.length,
-          error: videoResult.error
-        })
+        const mediaUrl = result.videoUrl || result.imageUrl;
 
-        if (videoResult.success && videoResult.videoUrl) {
-          console.log(`💾 Updating database with video URL for scene ${scene.scene_number}:`, videoResult.videoUrl)
-          
-          // Update scene video with generated video URL
-          const { data: updateData, error: updateVideoError } = await supabase
+        if (result.success && mediaUrl) {
+          // Update scene video with generated content URL
+          const { error: updateVideoError } = await supabase
             .from('content_scene_videos')
             .update({
-              video_url: videoResult.videoUrl,
+              video_url: mediaUrl,
               video_status: 'completed',
               completed_at: new Date().toISOString()
             })
             .eq('id', sceneVideoId)
-            .select()
 
           if (updateVideoError) {
             console.error(`❌ Error updating scene video for scene ${scene.scene_number}:`, updateVideoError)
             failCount++
           } else {
             console.log(`✅ Successfully updated database for scene ${scene.scene_number}`)
-            console.log(`📋 Updated record:`, updateData)
-            console.log(`🔗 Video URL stored: ${videoResult.videoUrl}`)
             successCount++
           }
         } else {
           // Update scene video with error
-          const { error: updateErrorStatus } = await supabase
+          await supabase
             .from('content_scene_videos')
             .update({
               video_status: 'failed',
-              error_message: videoResult.error,
+              error_message: result.error,
               completed_at: new Date().toISOString()
             })
             .eq('id', sceneVideoId)
 
-          if (updateErrorStatus) {
-            console.error(`❌ Error updating failed status for scene ${scene.scene_number}:`, updateErrorStatus)
-          }
-
-          console.error(`❌ Video generation failed for scene ${scene.scene_number}: ${videoResult.error}`)
+          console.error(`❌ Generation failed for scene ${scene.scene_number}: ${result.error}`)
           failCount++
         }
 
@@ -184,26 +210,20 @@ serve(async (req) => {
       }
     }
 
-    // Check final status of all videos
-    const { data: sceneVideos, error: finalCheckError } = await supabase
+    // Check final status
+    const { data: sceneVideos } = await supabase
       .from('content_scene_videos')
       .select('video_status')
       .in('scene_id', scenes.map(s => s.id))
 
-    if (finalCheckError) {
-      console.error('Error checking final video status:', finalCheckError)
-    }
-
     const allCompleted = sceneVideos?.every(sv => sv.video_status === 'completed') || false
     const anyFailed = sceneVideos?.some(sv => sv.video_status === 'failed') || false
 
-    console.log(`📊 Final status: ${successCount} successful, ${failCount} failed, allCompleted: ${allCompleted}, anyFailed: ${anyFailed}`)
-
-    // Update content item video status
+    // Update content item final status
     const finalVideoStatus = allCompleted ? 'completed' : anyFailed ? 'failed' : 'in_progress'
-    const nextStage = allCompleted ? 'music_creation' : 'video_creation'
+    const nextStage = allCompleted ? 'music_creation' : (useVideoGeneration ? 'video_creation' : 'image_creation')
 
-    const { error: finalUpdateError } = await supabase
+    await supabase
       .from('content_items')
       .update({
         video_status: finalVideoStatus,
@@ -212,28 +232,23 @@ serve(async (req) => {
       })
       .eq('id', contentItemId)
 
-    if (finalUpdateError) {
-      console.error('Error updating final content item status:', finalUpdateError)
-    }
-
-    console.log(`🎉 Video generation process completed for content item ${contentItemId}`)
+    console.log(`🎉 Scene generation process completed for content item ${contentItemId}`)
 
     return new Response(JSON.stringify({ 
       success: true, 
       contentItemId,
+      generationType,
       scenesProcessed: scenes.length,
-      videosGenerated: successCount,
-      videosFailed: failCount,
+      mediaGenerated: successCount,
+      mediaFailed: failCount,
       allCompleted,
-      anyFailed,
-      providersUsed: config,
-      availableProviders
+      anyFailed
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
-    console.error('💥 Video generation error:', error)
+    console.error('💥 Scene generation error:', error)
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }

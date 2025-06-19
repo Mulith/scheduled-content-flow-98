@@ -46,6 +46,7 @@ export const ChannelCreation = ({
   const [platform, setPlatform] = useState("");
   const [accountName, setAccountName] = useState("");
   const [connectedYouTubeChannels, setConnectedYouTubeChannels] = useState<any[]>([]);
+  const [contentGenerationType, setContentGenerationType] = useState<"dynamic_image" | "video">("dynamic_image");
   
   const { createCheckoutSession, isLoading: checkoutLoading } = useStripeCheckout();
   const { fetchConnectedChannels } = useYouTubeAuth();
@@ -97,7 +98,8 @@ export const ChannelCreation = ({
       topicMode,
       selectedTopics,
       platform,
-      accountName
+      accountName,
+      contentGenerationType
     });
     
     console.log("Component props - isDialog:", isDialog, "onSubmit exists:", !!onSubmit);
@@ -127,7 +129,8 @@ export const ChannelCreation = ({
       topicMode,
       selectedTopics,
       platform,
-      accountName
+      accountName,
+      contentGenerationType
     };
 
     // Only use dialog mode if explicitly set AND onSubmit is provided
@@ -175,6 +178,13 @@ export const ChannelCreation = ({
         connectedYouTubeChannels={connectedYouTubeChannels}
         mockTikTokAccounts={mockTikTokAccounts}
         usedYouTubeChannels={getUsedYouTubeChannels()}
+      />
+
+      {/* Hidden Content Generation Type - defaults to dynamic_image */}
+      <input 
+        type="hidden" 
+        value={contentGenerationType} 
+        onChange={(e) => setContentGenerationType(e.target.value as "dynamic_image" | "video")}
       />
 
       <VideoStyleSelector 

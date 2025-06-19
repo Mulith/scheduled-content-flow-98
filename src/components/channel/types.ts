@@ -28,4 +28,5 @@ export interface ContentChannel {
     name: string;
   };
   themes?: string[];
+  contentGenerationType?: "dynamic_image" | "video";
 }
