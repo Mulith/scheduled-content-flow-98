@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
 
@@ -38,7 +39,7 @@ async function generateVoiceNarration(text: string, voiceId: string): Promise<st
     headers: {
       'Accept': 'audio/mpeg',
       'Content-Type': 'application/json',
-      'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY')!,
+      'xi-api-key': apiKey,
     },
     body: JSON.stringify({
       text: text,
@@ -193,6 +194,8 @@ serve(async (req) => {
     };
 
     const elevenlabsVoiceId = voiceIdMap[voiceId] || voiceIdMap['Aria'];
+    console.log('🎤 Using ElevenLabs voice ID:', elevenlabsVoiceId);
+    
     const audioBase64 = await generateVoiceNarration(contentItem.script, elevenlabsVoiceId);
 
     // Create video with parallax effects, narration, and text overlays
