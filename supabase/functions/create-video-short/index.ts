@@ -25,6 +25,13 @@ interface ContentItem {
 
 async function generateVoiceNarration(text: string, voiceId: string): Promise<string> {
   console.log('🎙️ Generating voice narration with ElevenLabs...');
+  console.log('🎙️ Voice ID:', voiceId);
+  console.log('🎙️ Text length:', text.length);
+  
+  const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
+  if (!apiKey) {
+    throw new Error('ElevenLabs API key not found');
+  }
   
   const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: 'POST',
@@ -93,12 +100,18 @@ async function createVideoWithRunwayML(scenes: Scene[], audioBase64: string, tit
 }
 
 serve(async (req) => {
+  console.log('🎬 Video creation function called');
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { contentItemId, voiceId = 'Aria' } = await req.json();
+    console.log('📥 Parsing request body...');
+    const requestBody = await req.json();
+    console.log('📥 Request body:', requestBody);
+    
+    const { contentItemId, voiceId = 'Aria' } = requestBody;
 
     if (!contentItemId) {
       throw new Error('Content item ID is required');
@@ -106,13 +119,30 @@ serve(async (req) => {
 
     console.log('🎥 Starting video creation for content item:', contentItemId);
 
+    // Check environment variables
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const elevenlabsKey = Deno.env.get('ELEVENLABS_API_KEY');
+    
+    console.log('🔑 Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasSupabaseKey: !!supabaseKey,
+      hasElevenlabsKey: !!elevenlabsKey
+    });
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase environment variables');
+    }
+
+    if (!elevenlabsKey) {
+      throw new Error('Missing ElevenLabs API key');
+    }
+
     // Initialize Supabase client
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    );
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch content item with scenes and generated images
+    console.log('🔍 Fetching content item from database...');
     const { data: contentItem, error } = await supabase
       .from('content_items')
       .select(`
@@ -124,6 +154,12 @@ serve(async (req) => {
       `)
       .eq('id', contentItemId)
       .single() as { data: ContentItem | null, error: any };
+
+    console.log('📊 Database query result:', {
+      hasData: !!contentItem,
+      error: error?.message,
+      contentItemTitle: contentItem?.title
+    });
 
     if (error || !contentItem) {
       throw new Error(`Failed to fetch content item: ${error?.message || 'Not found'}`);
@@ -188,10 +224,15 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('💥 Video creation error:', error);
+    console.error('💥 Error stack:', error.stack);
+    console.error('💥 Error name:', error.name);
+    console.error('💥 Error message:', error.message);
+    
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: error.message || 'Unknown error occurred',
+        details: error.stack || 'No stack trace available'
       }),
       {
         status: 500,
