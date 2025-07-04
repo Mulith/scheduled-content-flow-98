@@ -63,46 +63,122 @@ async function generateVoiceNarration(text: string, voiceId: string): Promise<Ui
   return new Uint8Array(audioBuffer);
 }
 
-async function createValidMP4File(scenes: Scene[], audioData: Uint8Array, title: string): Promise<Uint8Array> {
-  console.log('🎬 Creating valid MP4 file...');
+async function downloadImage(url: string): Promise<Uint8Array> {
+  console.log('📥 Downloading image:', url);
   
-  // Create a minimal valid MP4 file structure
-  // This is a basic MP4 file header that will be recognized by media players
-  const mp4Header = new Uint8Array([
-    // ftyp box (file type)
-    0x00, 0x00, 0x00, 0x20, // box size (32 bytes)
-    0x66, 0x74, 0x79, 0x70, // 'ftyp'
-    0x69, 0x73, 0x6F, 0x6D, // major_brand: 'isom'
-    0x00, 0x00, 0x02, 0x00, // minor_version
-    0x69, 0x73, 0x6F, 0x6D, // compatible_brands: 'isom'
-    0x69, 0x73, 0x6F, 0x32, // 'iso2'
-    0x61, 0x76, 0x63, 0x31, // 'avc1'
-    0x6D, 0x70, 0x34, 0x31, // 'mp41'
-    
-    // mdat box (media data) - minimal
-    0x00, 0x00, 0x00, 0x08, // box size (8 bytes)
-    0x6D, 0x64, 0x61, 0x74, // 'mdat'
-  ]);
-
-  // For now, create a small but valid MP4 structure
-  // In production, this would combine the generated images with audio using FFmpeg
-  const totalSize = mp4Header.length + 1024; // Add some padding
-  const mp4Data = new Uint8Array(totalSize);
-  
-  // Copy header
-  mp4Data.set(mp4Header, 0);
-  
-  // Fill the rest with valid MP4 padding
-  for (let i = mp4Header.length; i < totalSize; i++) {
-    mp4Data[i] = 0x00;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to download image: ${response.status}`);
   }
-
-  console.log('✅ Valid MP4 file created');
-  console.log('📊 File size:', mp4Data.length, 'bytes');
-  console.log('🎞️ Scenes processed:', scenes.length);
-  console.log('🎵 Audio data size:', audioData.length, 'bytes');
   
-  return mp4Data;
+  const buffer = await response.arrayBuffer();
+  console.log('✅ Image downloaded, size:', buffer.byteLength);
+  return new Uint8Array(buffer);
+}
+
+async function createVideoWithFFmpeg(scenes: Scene[], audioData: Uint8Array, title: string): Promise<Uint8Array> {
+  console.log('🎬 Creating video with FFmpeg...');
+  console.log('🎞️ Processing', scenes.length, 'scenes');
+  
+  // Create temporary directory for processing
+  const tempDir = await Deno.makeTempDir({ prefix: 'video_creation_' });
+  console.log('📁 Created temp directory:', tempDir);
+  
+  try {
+    // Save audio file
+    const audioPath = `${tempDir}/narration.mp3`;
+    await Deno.writeFile(audioPath, audioData);
+    console.log('🎵 Audio saved to:', audioPath);
+
+    // Download and save all scene images
+    const imagePaths: string[] = [];
+    for (let i = 0; i < scenes.length; i++) {
+      const scene = scenes[i];
+      const imageUrl = scene.content_scene_videos?.[0]?.video_url;
+      
+      if (imageUrl) {
+        console.log(`📸 Processing scene ${i + 1}/${scenes.length}`);
+        const imageData = await downloadImage(imageUrl);
+        const imagePath = `${tempDir}/scene_${i.toString().padStart(3, '0')}.jpg`;
+        await Deno.writeFile(imagePath, imageData);
+        imagePaths.push(imagePath);
+        console.log(`✅ Scene ${i + 1} image saved`);
+      }
+    }
+
+    if (imagePaths.length === 0) {
+      throw new Error('No images found to create video');
+    }
+
+    // Create video using FFmpeg
+    const outputPath = `${tempDir}/output.mp4`;
+    console.log('🎬 Starting FFmpeg video creation...');
+
+    // Calculate duration per image (distribute evenly across scenes)
+    const totalDuration = Math.max(60, scenes.length * 8); // Minimum 60 seconds, or 8 seconds per scene
+    const durationPerImage = totalDuration / imagePaths.length;
+
+    // Create a text file listing all images with durations
+    const imageListPath = `${tempDir}/images.txt`;
+    const imageListContent = imagePaths
+      .map(path => `file '${path}'\nduration ${durationPerImage}`)
+      .join('\n') + '\n' + `file '${imagePaths[imagePaths.length - 1]}'`; // Repeat last image
+    
+    await Deno.writeTextFile(imageListPath, imageListContent);
+
+    // FFmpeg command to create video from images and audio
+    const ffmpegArgs = [
+      '-f', 'concat',
+      '-safe', '0',
+      '-i', imageListPath,
+      '-i', audioPath,
+      '-c:v', 'libx264',
+      '-c:a', 'aac',
+      '-pix_fmt', 'yuv420p',
+      '-r', '1', // 1 frame per second for slideshow effect
+      '-shortest', // End when shortest input ends
+      '-y', // Overwrite output file
+      outputPath
+    ];
+
+    console.log('🚀 Running FFmpeg with args:', ffmpegArgs.join(' '));
+
+    const ffmpegProcess = new Deno.Command('ffmpeg', {
+      args: ffmpegArgs,
+      stdout: 'piped',
+      stderr: 'piped',
+    });
+
+    const { code, stdout, stderr } = await ffmpegProcess.output();
+    
+    const stdoutText = new TextDecoder().decode(stdout);
+    const stderrText = new TextDecoder().decode(stderr);
+    
+    console.log('📊 FFmpeg stdout:', stdoutText);
+    console.log('📊 FFmpeg stderr:', stderrText);
+
+    if (code !== 0) {
+      throw new Error(`FFmpeg failed with code ${code}: ${stderrText}`);
+    }
+
+    // Read the generated video file
+    const videoData = await Deno.readFile(outputPath);
+    console.log('✅ Video created successfully, size:', videoData.length, 'bytes');
+
+    return videoData;
+
+  } catch (error) {
+    console.error('❌ Error in video creation:', error);
+    throw error;
+  } finally {
+    // Clean up temporary directory
+    try {
+      await Deno.remove(tempDir, { recursive: true });
+      console.log('🧹 Cleaned up temp directory');
+    } catch (cleanupError) {
+      console.warn('⚠️ Failed to clean up temp directory:', cleanupError);
+    }
+  }
 }
 
 async function uploadVideoToStorage(supabase: any, videoData: Uint8Array, fileName: string): Promise<string> {
@@ -173,6 +249,18 @@ serve(async (req) => {
       throw new Error('Missing ElevenLabs API key');
     }
 
+    // Check if FFmpeg is available
+    try {
+      const ffmpegCheck = new Deno.Command('ffmpeg', { args: ['-version'] });
+      const { code } = await ffmpegCheck.output();
+      if (code !== 0) {
+        throw new Error('FFmpeg not available');
+      }
+      console.log('✅ FFmpeg is available');
+    } catch (error) {
+      throw new Error('FFmpeg is not installed or not available in PATH');
+    }
+
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -232,8 +320,8 @@ serve(async (req) => {
     
     const audioData = await generateVoiceNarration(contentItem.script, elevenlabsVoiceId);
 
-    // Create valid MP4 video file
-    const videoData = await createValidMP4File(scenesWithImages, audioData, contentItem.title);
+    // Create video using FFmpeg
+    const videoData = await createVideoWithFFmpeg(scenesWithImages, audioData, contentItem.title);
 
     // Upload video to Supabase storage
     const fileName = `${contentItemId}-${Date.now()}.mp4`;
