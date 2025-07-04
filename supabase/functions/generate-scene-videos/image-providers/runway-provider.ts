@@ -19,12 +19,13 @@ export class RunwayImageProvider extends BaseImageProvider {
       
       console.log(`🎨 Generating image with Runway gen4_image: ${request.prompt.substring(0, 100)}...`);
 
-      // Runway gen4_image API call
-      const response = await fetch('https://api.runwayml.com/v1/image/generate', {
+      // Runway gen4_image API call with correct endpoint
+      const response = await fetch('https://api.runwayml.com/v1/image_generation', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
+          'X-Runway-Version': '2024-11-06'
         },
         body: JSON.stringify({
           model: 'gen4_image',
@@ -33,7 +34,7 @@ export class RunwayImageProvider extends BaseImageProvider {
           height: request.aspectRatio === '16:9' ? 768 : 1024,
           num_images: 1,
           guidance_scale: 7.5,
-          inference_steps: 25
+          num_inference_steps: 25
         })
       });
 
@@ -54,9 +55,9 @@ export class RunwayImageProvider extends BaseImageProvider {
 
       console.log('✅ Runway gen4_image API response received');
       
-      // Runway gen4_image returns images directly in the response
-      if (result.images && result.images.length > 0) {
-        const imageUrl = result.images[0].url;
+      // Check for the correct response format from Runway
+      if (result.data && result.data.length > 0 && result.data[0].url) {
+        const imageUrl = result.data[0].url;
         console.log(`🖼️ Generated image URL: ${imageUrl}`);
         
         return {
@@ -64,7 +65,17 @@ export class RunwayImageProvider extends BaseImageProvider {
           imageUrl: imageUrl,
           providerId: this.id
         };
+      } else if (result.url) {
+        // Alternative response format
+        console.log(`🖼️ Generated image URL: ${result.url}`);
+        
+        return {
+          success: true,
+          imageUrl: result.url,
+          providerId: this.id
+        };
       } else {
+        console.error('Unexpected Runway response format:', result);
         throw new Error('No images returned from Runway gen4_image API');
       }
 
