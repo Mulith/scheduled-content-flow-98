@@ -115,29 +115,101 @@ CRITICAL REQUIREMENTS:
 7. Make content engaging, actionable, and valuable to viewers
 8. STRICTLY follow the chosen video style format and structure
 
-    VISUAL DESCRIPTION REQUIREMENTS:
-    - MAINTAIN VISUAL CONSISTENCY across all scenes with these elements:
-      * ORIENTATION: Always portrait orientation (taller than wide, 9:16 aspect ratio)
-      * CHARACTER CONSISTENCY: If featuring a person, maintain the same individual throughout all scenes (same age, ethnicity, hair color/style, facial features, clothing style)
-      * COLOR GRADING: Use a cohesive color palette across all scenes (warm tones: golden, amber, soft oranges OR cool tones: blues, teals, purples OR neutral tones: grays, whites, blacks)
-      * LIGHTING STYLE: Consistent lighting approach (soft natural light, dramatic studio lighting, or bright daylight)
-      * VISUAL STYLE: Maintain the same photographic/artistic style (professional photography, cinematic, minimalist, etc.)
+    COMPREHENSIVE VISUAL DESCRIPTION REQUIREMENTS:
     
-    - DETAILED SCENE DESCRIPTIONS must include:
-      * Camera angle and framing (close-up, medium shot, full body, over-shoulder, etc.)
-      * Specific lighting setup (window light, studio lighting, golden hour, etc.)
-      * Exact clothing and appearance details (maintain same outfit/style across scenes)
-      * Background and environment specifics (indoor/outdoor, props, furniture, colors)
-      * Facial expressions and body language that match the narration
-      * Color temperature and mood (warm/cool/neutral to match chosen palette)
-      * Any text overlays, graphics, or visual effects needed
+    **MANDATORY CONSISTENCY ELEMENTS** (Apply to ALL scenes):
+    - ORIENTATION: Always portrait orientation (9:16 aspect ratio, taller than wide, mobile-optimized vertical framing)
+    - CHARACTER CONSISTENCY: If featuring a person, maintain EXACTLY the same individual throughout ALL scenes:
+      * Same age range, ethnicity, gender, and body type
+      * Identical hair color, style, length, and texture
+      * Same facial features, eye color, skin tone, and facial structure
+      * Consistent clothing style and outfit (unless narrative requires a change)
+      * Same accessories, jewelry, or distinctive features
+      * Maintain same overall appearance and styling choices
+    - COLOR GRADING: Use ONE cohesive color palette throughout all scenes:
+      * Warm palette: Golden hour lighting, amber tones, soft oranges, honey colors, cream whites
+      * Cool palette: Blues, teals, purples, silver grays, crisp whites with blue undertones
+      * Neutral palette: Grays, beiges, blacks, whites, earth tones, muted colors
+      * Cinematic palette: High contrast, dramatic shadows, selective color emphasis
+    - LIGHTING STYLE: Maintain consistent lighting approach across ALL scenes:
+      * Soft natural light: Window light, diffused daylight, gentle shadows
+      * Dramatic studio lighting: Directional lights, strong shadows, high contrast
+      * Golden hour: Warm, glowing, backlit, sunset/sunrise quality
+      * Bright clean lighting: Even illumination, minimal shadows, professional setup
+    - VISUAL STYLE: Consistent photographic/cinematic approach:
+      * Professional photography style with shallow depth of field
+      * Cinematic film look with color grading and composition
+      * Clean minimalist aesthetic with simple backgrounds
+      * Documentary-style realistic and natural appearance
     
-    - CONSISTENCY EXAMPLES:
-      * "Same young professional woman, brown hair in bun, white blouse, warm golden lighting, portrait orientation"
-      * "Identical color grading with warm amber tones, soft shadows, professional photography style"
-      * "Consistent background aesthetic - modern office or home workspace with neutral colors"
+    **DETAILED SCENE COMPOSITION** (Required for each scene):
+    - CAMERA WORK: Specify exact camera positioning and movement:
+      * Camera angle: Eye-level, low angle, high angle, Dutch angle, over-shoulder
+      * Shot type: Extreme close-up, close-up, medium close-up, medium shot, medium wide, wide shot
+      * Camera movement: Static, slow zoom in/out, pan left/right, tilt up/down, dolly movement
+      * Depth of field: Shallow focus with background blur, deep focus, rack focus effects
+      * Framing: Rule of thirds, centered composition, off-center dynamic framing
     
-    ${themes ? `- THEME INTEGRATION: Incorporate selected themes (${themes}) while maintaining visual consistency in mood, lighting, colors, and overall aesthetic` : ''}
+    - LIGHTING SETUP: Describe comprehensive lighting details:
+      * Primary light source: Window light, studio key light, natural sunlight, artificial lighting
+      * Light direction: Front lighting, side lighting, backlighting, rim lighting
+      * Light quality: Soft diffused, hard directional, bounced light, filtered light
+      * Shadows: Soft shadows, dramatic shadows, no shadows, cast shadows
+      * Color temperature: Warm (3200K), neutral (5600K), cool (7000K+), mixed lighting
+      * Mood lighting: Atmospheric, moody, bright and airy, dramatic chiaroscuro
+    
+    - CHARACTER DETAILS: Comprehensive appearance description:
+      * Facial expression: Specific emotion, micro-expressions, eye contact direction
+      * Body language: Posture, gesture, hand position, stance, movement
+      * Clothing: Detailed outfit description, fabric texture, fit, style, colors
+      * Hair and makeup: Styling, natural/styled look, makeup level, hair position
+      * Props interaction: How they hold, use, or interact with objects
+      * Energy level: Calm, animated, focused, relaxed, intense, enthusiastic
+    
+    - ENVIRONMENT AND SETTING: Rich background and context:
+      * Location type: Indoor/outdoor, specific room/space, natural/urban setting
+      * Background elements: Furniture, decorations, architectural features, natural elements
+      * Props and objects: Specific items, their placement, size, material, condition
+      * Spatial relationship: Foreground, midground, background layering
+      * Environmental mood: Cozy, professional, energetic, serene, busy, minimal
+      * Seasonal/temporal indicators: Time of day, season, weather, atmosphere
+    
+    - COLOR AND TEXTURE DETAILS: Comprehensive visual palette:
+      * Dominant colors: Primary colors in the scene, their saturation and brightness
+      * Secondary colors: Supporting colors, accent colors, color harmony
+      * Material textures: Fabric, wood, metal, glass, natural textures
+      * Surface qualities: Matte, glossy, rough, smooth, weathered, pristine
+      * Color relationships: Complementary, analogous, monochromatic schemes
+      * Visual weight: How colors and elements balance in the composition
+    
+    - TECHNICAL SPECIFICATIONS: Professional production details:
+      * Image quality: High resolution, sharp focus, professional grade
+      * Style references: Photography style, artistic movement, visual inspiration
+      * Post-processing: Color correction, contrast, saturation, clarity
+      * Aspect ratio confirmation: 9:16 portrait orientation
+      * Visual effects: Natural bokeh, lens flares, atmospheric effects
+      * Composition rules: Leading lines, symmetry, patterns, visual flow
+    
+    **CONSISTENCY EXAMPLES AND TEMPLATES**:
+    - Character template: "Same [age] [ethnicity] [gender], [hair description], wearing [clothing style], [lighting type] lighting, portrait orientation"
+    - Color template: "Consistent [warm/cool/neutral] color grading with [specific colors], [lighting quality] lighting, [mood] atmosphere"
+    - Environment template: "[Location type] setting with [background elements], [lighting setup], maintaining [visual style] aesthetic"
+    
+    **NARRATIVE INTEGRATION**: Ensure visual descriptions support the story:
+    - Visual metaphors: Use imagery that reinforces the message
+    - Emotional alignment: Visuals match the emotional tone of the narration
+    - Progression: Visual elements evolve naturally across scenes
+    - Attention direction: Guide viewer focus to support the narrative
+    - Brand consistency: Maintain professional, engaging visual identity
+    
+    ${themes ? `
+    **THEME INTEGRATION**: Incorporate selected themes (${themes}) while maintaining visual consistency:
+    - Theme-based color palettes that align with selected themes
+    - Environmental choices that reflect thematic elements
+    - Lighting moods that enhance thematic atmosphere
+    - Compositional elements that support thematic messaging
+    - Props and styling that reinforce thematic concepts
+    ` : ''}
 
 TIMING REQUIREMENTS:
 - Scene timing must add up to exactly ${targetDuration} seconds
