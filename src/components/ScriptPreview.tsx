@@ -15,10 +15,17 @@ interface ScriptPreviewProps {
 
 export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
   const [selectedScene, setSelectedScene] = useState(1);
-  const { generateVideos, isGenerating } = useVideoGeneration();
+  const { generateVideos, isGenerating, createVideoShort, isCreatingVideoShort } = useVideoGeneration();
 
   const handleGenerateContent = () => {
     generateVideos.mutate(contentItem.id);
+  };
+
+  const handleCreateVideoShort = () => {
+    createVideoShort.mutate({ 
+      contentItemId: contentItem.id, 
+      voiceId: 'Aria' // Default voice, can be made configurable
+    });
   };
 
   // Process scenes from the real data structure
@@ -55,6 +62,9 @@ export const ScriptPreview = ({ contentItem }: ScriptPreviewProps) => {
         scenes={scenes}
         onGenerateContent={handleGenerateContent}
         isGenerating={isGenerating}
+        onCreateVideoShort={handleCreateVideoShort}
+        isCreatingVideoShort={isCreatingVideoShort}
+        storyboard={storyboard}
       />
 
       {/* Script Content */}

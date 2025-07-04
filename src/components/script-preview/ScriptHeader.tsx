@@ -2,9 +2,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Edit, Download, Clock, Eye } from "lucide-react";
+import { Play, Edit, Download, Clock, Eye, Video } from "lucide-react";
 import { ContentStatusProgress } from "@/components/ContentStatusProgress";
-import { ContentItem, Scene } from "./types";
+import { ContentItem, Scene, StoryboardItem } from "./types";
 import { formatDuration } from "./utils";
 
 interface ScriptHeaderProps {
@@ -12,9 +12,24 @@ interface ScriptHeaderProps {
   scenes: Scene[];
   onGenerateContent: () => void;
   isGenerating: boolean;
+  onCreateVideoShort?: () => void;
+  isCreatingVideoShort?: boolean;
+  storyboard?: StoryboardItem[];
 }
 
-export const ScriptHeader = ({ contentItem, scenes, onGenerateContent, isGenerating }: ScriptHeaderProps) => {
+export const ScriptHeader = ({ 
+  contentItem, 
+  scenes, 
+  onGenerateContent, 
+  isGenerating, 
+  onCreateVideoShort, 
+  isCreatingVideoShort, 
+  storyboard 
+}: ScriptHeaderProps) => {
+  // Check if all scenes have generated images
+  const allScenesGenerated = storyboard?.every(item => 
+    item.videoStatus === 'completed' && item.videoUrl
+  ) || false;
   return (
     <Card className="bg-black/40 border-white/10 backdrop-blur-sm">
       <CardHeader>
@@ -54,6 +69,16 @@ export const ScriptHeader = ({ contentItem, scenes, onGenerateContent, isGenerat
               <Play className="w-4 h-4 mr-2" />
               {isGenerating ? "Generating..." : "Generate Content"}
             </Button>
+            {onCreateVideoShort && allScenesGenerated && (
+              <Button 
+                className="bg-purple-600 hover:bg-purple-700" 
+                onClick={onCreateVideoShort}
+                disabled={isCreatingVideoShort}
+              >
+                <Video className="w-4 h-4 mr-2" />
+                {isCreatingVideoShort ? "Creating Video..." : "Create YouTube Short"}
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>

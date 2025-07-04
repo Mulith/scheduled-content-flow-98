@@ -2,9 +2,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useVideoShortCreation } from "./useVideoShortCreation";
 
 export const useVideoGeneration = () => {
   const queryClient = useQueryClient();
+  const { createVideoShort, isCreating: isCreatingVideoShort } = useVideoShortCreation();
 
   const generateVideos = useMutation({
     mutationFn: async (contentItemId: string) => {
@@ -46,5 +48,7 @@ export const useVideoGeneration = () => {
   return {
     generateVideos,
     isGenerating: generateVideos.isPending,
+    createVideoShort,
+    isCreatingVideoShort,
   };
 };
