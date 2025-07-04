@@ -18,14 +18,18 @@ export class RunwayImageProvider extends BaseImageProvider {
       this.validateRequest(request);
       
       console.log(`🎨 Generating image with Runway gen4_image: ${request.prompt.substring(0, 100)}...`);
+      console.log(`📝 Request body:`, JSON.stringify({
+        model: 'gen4_image',
+        promptText: request.prompt,
+        ratio: request.aspectRatio === '16:9' ? '1344:768' : '1024:1024'
+      }));
 
       // Runway gen4_image API call with correct endpoint  
       const response = await fetch('https://api.runwayml.com/v1/text_to_image', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
-          'Content-Type': 'application/json',
-          'X-Runway-Version': '2024-11-06'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           model: 'gen4_image',
