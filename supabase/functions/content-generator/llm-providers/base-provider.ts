@@ -115,16 +115,29 @@ CRITICAL REQUIREMENTS:
 7. Make content engaging, actionable, and valuable to viewers
 8. STRICTLY follow the chosen video style format and structure
 
-VISUAL DESCRIPTION REQUIREMENTS:
-- Be extremely detailed and specific for each scene
-- Include camera angles, lighting, composition, colors
-- Describe facial expressions, gestures, and body language
-- Mention specific props, backgrounds, or settings
-- Include movement and action descriptions
-- Consider text overlays, graphics, or visual effects
-- Be cinematic and visually compelling
-- Match the visual style to the content format
-${themes ? `- Incorporate the selected themes (${themes}) into visual descriptions, affecting mood, lighting, colors, and overall aesthetic` : ''}
+    VISUAL DESCRIPTION REQUIREMENTS:
+    - MAINTAIN VISUAL CONSISTENCY across all scenes with these elements:
+      * ORIENTATION: Always portrait orientation (taller than wide, 9:16 aspect ratio)
+      * CHARACTER CONSISTENCY: If featuring a person, maintain the same individual throughout all scenes (same age, ethnicity, hair color/style, facial features, clothing style)
+      * COLOR GRADING: Use a cohesive color palette across all scenes (warm tones: golden, amber, soft oranges OR cool tones: blues, teals, purples OR neutral tones: grays, whites, blacks)
+      * LIGHTING STYLE: Consistent lighting approach (soft natural light, dramatic studio lighting, or bright daylight)
+      * VISUAL STYLE: Maintain the same photographic/artistic style (professional photography, cinematic, minimalist, etc.)
+    
+    - DETAILED SCENE DESCRIPTIONS must include:
+      * Camera angle and framing (close-up, medium shot, full body, over-shoulder, etc.)
+      * Specific lighting setup (window light, studio lighting, golden hour, etc.)
+      * Exact clothing and appearance details (maintain same outfit/style across scenes)
+      * Background and environment specifics (indoor/outdoor, props, furniture, colors)
+      * Facial expressions and body language that match the narration
+      * Color temperature and mood (warm/cool/neutral to match chosen palette)
+      * Any text overlays, graphics, or visual effects needed
+    
+    - CONSISTENCY EXAMPLES:
+      * "Same young professional woman, brown hair in bun, white blouse, warm golden lighting, portrait orientation"
+      * "Identical color grading with warm amber tones, soft shadows, professional photography style"
+      * "Consistent background aesthetic - modern office or home workspace with neutral colors"
+    
+    ${themes ? `- THEME INTEGRATION: Incorporate selected themes (${themes}) while maintaining visual consistency in mood, lighting, colors, and overall aesthetic` : ''}
 
 TIMING REQUIREMENTS:
 - Scene timing must add up to exactly ${targetDuration} seconds
