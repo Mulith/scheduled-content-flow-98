@@ -1,5 +1,6 @@
 
-import { BaseLLMProvider, ContentGenerationRequest, LLMGenerationResponse } from './llm-providers/base-provider.ts';
+import { BaseLLMProvider } from './llm-providers/base-provider.ts';
+import { ContentGenerationRequest, LLMGenerationResponse } from './llm-providers/types.ts';
 import { GeminiLLMProvider } from './llm-providers/gemini-provider.ts';
 import { OpenAILLMProvider } from './llm-providers/openai-provider.ts';
 import { AnthropicLLMProvider } from './llm-providers/anthropic-provider.ts';

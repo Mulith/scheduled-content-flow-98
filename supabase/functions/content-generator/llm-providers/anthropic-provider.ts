@@ -1,5 +1,6 @@
 
-import { BaseLLMProvider, ContentGenerationRequest, LLMGenerationResponse } from './base-provider.ts';
+import { BaseLLMProvider } from './base-provider.ts';
+import { ContentGenerationRequest, LLMGenerationResponse } from './types.ts';
 
 export class AnthropicLLMProvider extends BaseLLMProvider {
   readonly providerId = 'anthropic';
