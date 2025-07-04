@@ -1,5 +1,6 @@
 
 import { BaseImageProvider, ImageGenerationRequest, ImageGenerationResponse } from './image-providers/base-provider.ts';
+import { RunwayImageProvider } from './image-providers/runway-provider.ts';
 import { GeminiImageProvider } from './image-providers/gemini-provider.ts';
 import { ImmersityProvider } from './image-providers/immersity-provider.ts';
 
@@ -12,17 +13,25 @@ export class ImageGenerationGateway {
   }
 
   private initializeProviders() {
+    const runwayKey = Deno.env.get('RUNWAY_API_KEY');
     const geminiKey = Deno.env.get('GEMINI_API_KEY');
     const immersityKey = Deno.env.get('IMMERSITY_API_KEY');
 
     console.log('🔑 Checking image generation API keys:', {
+      runway: !!runwayKey,
       gemini: !!geminiKey,
       immersity: !!immersityKey
     });
 
+    // Prioritize Runway as the primary provider
+    if (runwayKey) {
+      this.providers.set('runway', new RunwayImageProvider(runwayKey));
+      console.log('✅ Runway image provider initialized (PRIMARY)');
+    }
+
     if (geminiKey) {
       this.providers.set('gemini', new GeminiImageProvider(geminiKey));
-      console.log('✅ Gemini image provider initialized');
+      console.log('✅ Gemini image provider initialized (FALLBACK)');
     }
 
     if (immersityKey) {
@@ -39,18 +48,25 @@ export class ImageGenerationGateway {
     console.log(`🎨 Image Gateway: Starting dynamic image generation`);
     console.log(`📝 Request prompt: ${request.prompt.substring(0, 100)}...`);
 
-    // Step 1: Generate base image with Gemini
+    // Step 1: Generate base image with Runway (primary) or Gemini (fallback)
+    const runwayProvider = this.providers.get('runway');
     const geminiProvider = this.providers.get('gemini');
-    if (!geminiProvider || !geminiProvider.isAvailable) {
+    
+    let baseImageResult: ImageGenerationResponse;
+
+    if (runwayProvider && runwayProvider.isAvailable) {
+      console.log('🎨 Generating base image with Runway gen4_image...');
+      baseImageResult = await runwayProvider.generateImage(request);
+    } else if (geminiProvider && geminiProvider.isAvailable) {
+      console.log('🎨 Falling back to Gemini for base image generation...');
+      baseImageResult = await geminiProvider.generateImage(request);
+    } else {
       return {
         success: false,
-        error: 'Gemini image provider not available - please check your GEMINI_API_KEY',
+        error: 'No image providers available - please check your RUNWAY_API_KEY or GEMINI_API_KEY',
         providerId: 'gateway'
       };
     }
-
-    console.log('🎨 Generating base image with Gemini...');
-    const baseImageResult = await geminiProvider.generateImage(request);
     
     if (!baseImageResult.success || !baseImageResult.imageUrl) {
       console.error('❌ Base image generation failed:', baseImageResult.error);
