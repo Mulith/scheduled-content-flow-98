@@ -23,6 +23,7 @@ export interface ContentItem {
   channel: string;
   script: string;
   duration?: number;
+  duration_seconds?: number;
   scenes?: ContentScene[];
   generation_stage?: string;
   script_status?: string;
