@@ -8,6 +8,7 @@ import { ContentItem, Scene, StoryboardItem } from "./types";
 import { formatDuration } from "./utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 interface ScriptHeaderProps {
   contentItem: ContentItem;
@@ -28,6 +29,9 @@ export const ScriptHeader = ({
   isCreatingVideoShort, 
   storyboard 
 }: ScriptHeaderProps) => {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+
   // Check if all scenes have generated images
   const allScenesGenerated = storyboard?.every(item => 
     item.videoStatus === 'completed' && item.videoUrl
@@ -36,6 +40,33 @@ export const ScriptHeader = ({
   // Check if video short has been created
   const hasGeneratedVideo = contentItem.video_status === 'completed';
   const hasVideoFile = hasGeneratedVideo && contentItem.video_file_path;
+
+  // Get video URL when component mounts or video file path changes
+  useEffect(() => {
+    const getVideoUrl = async () => {
+      if (!hasVideoFile || !contentItem.video_file_path) return;
+      
+      setIsLoadingVideo(true);
+      try {
+        console.log('🎥 Getting video URL for preview:', contentItem.video_file_path);
+        
+        const { data } = supabase.storage
+          .from('generated-videos')
+          .getPublicUrl(contentItem.video_file_path);
+        
+        if (data?.publicUrl) {
+          console.log('✅ Video URL obtained:', data.publicUrl);
+          setVideoUrl(data.publicUrl);
+        }
+      } catch (error) {
+        console.error('❌ Error getting video URL:', error);
+      } finally {
+        setIsLoadingVideo(false);
+      }
+    };
+
+    getVideoUrl();
+  }, [hasVideoFile, contentItem.video_file_path]);
 
   const handleDownloadVideo = async () => {
     if (!contentItem.video_file_path) {
@@ -183,47 +214,86 @@ export const ScriptHeader = ({
               Generated YouTube Short
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Your AI-generated video is ready for download and YouTube upload
+              Your AI-generated video is ready for preview and YouTube upload
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-gray-800/50 rounded-lg p-4 text-center">
-              <div className="flex items-center justify-center space-x-4">
-                <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                  Video Ready
-                </Badge>
-                <span className="text-gray-300 text-sm">
-                  Duration: ~{Math.ceil((contentItem.duration_seconds || 60) / 60)} min
-                </span>
+            <div className="space-y-4">
+              <div className="bg-gray-800/50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-4">
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                      Video Ready
+                    </Badge>
+                    <span className="text-gray-300 text-sm">
+                      Duration: ~{Math.ceil((contentItem.duration_seconds || 60) / 60)} min
+                    </span>
+                    {hasVideoFile && (
+                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                        File Stored
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="border-white/20 text-white hover:bg-white/10"
+                      onClick={handleDownloadVideo}
+                      disabled={!hasVideoFile}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                    <Button 
+                      size="sm"
+                      className="bg-red-600 hover:bg-red-700"
+                      onClick={handleUploadToYouTube}
+                    >
+                      <Video className="w-4 h-4 mr-2" />
+                      Upload to YouTube
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Video Preview */}
                 {hasVideoFile && (
-                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-                    File Stored
-                  </Badge>
+                  <div className="mt-4">
+                    {isLoadingVideo ? (
+                      <div className="aspect-video bg-gray-900/50 rounded-lg flex items-center justify-center">
+                        <div className="text-center text-gray-400">
+                          <Video className="w-8 h-8 mx-auto mb-2 animate-pulse" />
+                          <p>Loading video preview...</p>
+                        </div>
+                      </div>
+                    ) : videoUrl ? (
+                      <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                        <video 
+                          controls 
+                          className="w-full h-full object-contain"
+                          poster="/placeholder.svg"
+                        >
+                          <source src={videoUrl} type="video/mp4" />
+                          Your browser does not support the video tag.
+                        </video>
+                      </div>
+                    ) : (
+                      <div className="aspect-video bg-gray-900/50 rounded-lg flex items-center justify-center">
+                        <div className="text-center text-gray-400">
+                          <Video className="w-8 h-8 mx-auto mb-2" />
+                          <p>Video preview not available</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 )}
-              </div>
-              <p className="text-gray-400 mt-2 text-sm">
-                {hasVideoFile 
-                  ? "Video file is stored and ready for download. The final video combines your script narration with generated visuals."
-                  : "Video generation completed but file is not yet available for download."
-                }
-              </p>
-              <div className="mt-4 flex justify-center space-x-2">
-                <Button 
-                  variant="outline" 
-                  className="border-white/20 text-white hover:bg-white/10"
-                  onClick={handleDownloadVideo}
-                  disabled={!hasVideoFile}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  {hasVideoFile ? "Download Video" : "Video Not Available"}
-                </Button>
-                <Button 
-                  className="bg-red-600 hover:bg-red-700"
-                  onClick={handleUploadToYouTube}
-                >
-                  <Video className="w-4 h-4 mr-2" />
-                  Upload to YouTube
-                </Button>
+
+                <p className="text-gray-400 mt-4 text-sm text-center">
+                  {hasVideoFile 
+                    ? "Your generated video combines AI narration with dynamic visuals, ready for YouTube Shorts!"
+                    : "Video generation completed but file is not yet available for preview."
+                  }
+                </p>
               </div>
             </div>
           </CardContent>
