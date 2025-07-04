@@ -30,6 +30,7 @@ export interface ContentItem {
   video_status?: string;
   music_status?: string;
   post_status?: string;
+  video_file_path?: string;
 }
 
 export interface Scene {

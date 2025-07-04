@@ -132,6 +132,7 @@ export type Database = {
           topic_keywords: string[] | null
           updated_at: string
           updated_by_system: string | null
+          video_file_path: string | null
           video_status: string
         }
         Insert: {
@@ -149,6 +150,7 @@ export type Database = {
           topic_keywords?: string[] | null
           updated_at?: string
           updated_by_system?: string | null
+          video_file_path?: string | null
           video_status?: string
         }
         Update: {
@@ -166,6 +168,7 @@ export type Database = {
           topic_keywords?: string[] | null
           updated_at?: string
           updated_by_system?: string | null
+          video_file_path?: string | null
           video_status?: string
         }
         Relationships: [

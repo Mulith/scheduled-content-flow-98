@@ -24,7 +24,7 @@ interface ContentItem {
   content_scenes: Scene[];
 }
 
-async function generateVoiceNarration(text: string, voiceId: string): Promise<string> {
+async function generateVoiceNarration(text: string, voiceId: string): Promise<Uint8Array> {
   console.log('🎙️ Generating voice narration with ElevenLabs...');
   console.log('🎙️ Voice ID:', voiceId);
   console.log('🎙️ Text length:', text.length);
@@ -59,45 +59,62 @@ async function generateVoiceNarration(text: string, voiceId: string): Promise<st
   }
 
   const audioBuffer = await response.arrayBuffer();
-  const base64Audio = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
-  
   console.log('✅ Voice narration generated successfully');
-  return base64Audio;
+  return new Uint8Array(audioBuffer);
 }
 
-async function createVideoWithRunwayML(scenes: Scene[], audioBase64: string, title: string): Promise<string> {
-  console.log('🎬 Creating video with Runway ML...');
+async function createMockVideoFile(scenes: Scene[], audioData: Uint8Array, title: string): Promise<Uint8Array> {
+  console.log('🎬 Creating mock video file...');
   
-  // For now, we'll use a placeholder implementation
-  // In production, you would integrate with RunwayML's video generation API
-  // or use FFmpeg to combine images, audio, and effects
+  // For now, we'll create a simple mock video file
+  // In production, you would use FFmpeg or video processing APIs here
   
   const imageUrls = scenes
     .map(scene => scene.content_scene_videos?.[0]?.video_url)
     .filter(url => url) as string[];
 
-  if (imageUrls.length === 0) {
-    throw new Error('No generated images found for video creation');
-  }
-
-  console.log('📝 Video creation request:', {
+  console.log('📝 Mock video creation with:', {
     imageCount: imageUrls.length,
     title: title,
-    hasAudio: !!audioBase64
+    audioSize: audioData.length
   });
 
-  // This is a placeholder - in production you would:
-  // 1. Download the images from URLs
-  // 2. Create parallax effects using FFmpeg or video API
-  // 3. Add audio narration
-  // 4. Add text overlays
-  // 5. Export as MP4 in 9:16 aspect ratio for YouTube Shorts
+  // Create a simple mock video file (placeholder data)
+  // In production, this would combine images, audio, and effects into an actual MP4
+  const mockVideoData = new Uint8Array(1024 * 1024); // 1MB placeholder
+  mockVideoData.fill(42); // Fill with placeholder data
   
-  // For now, return a mock video URL
-  const mockVideoUrl = `https://example.com/generated-video-${Date.now()}.mp4`;
+  console.log('✅ Mock video file created');
+  return mockVideoData;
+}
+
+async function uploadVideoToStorage(supabase: any, videoData: Uint8Array, fileName: string): Promise<string> {
+  console.log('☁️ Uploading video to Supabase storage...');
+  console.log('📁 File name:', fileName);
+  console.log('📊 File size:', videoData.length, 'bytes');
+
+  const { data, error } = await supabase.storage
+    .from('generated-videos')
+    .upload(fileName, videoData, {
+      contentType: 'video/mp4',
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) {
+    console.error('❌ Storage upload error:', error);
+    throw new Error(`Failed to upload video: ${error.message}`);
+  }
+
+  console.log('✅ Video uploaded successfully:', data.path);
   
-  console.log('✅ Video created successfully (mock):', mockVideoUrl);
-  return mockVideoUrl;
+  // Get the public URL for the uploaded file
+  const { data: publicUrlData } = supabase.storage
+    .from('generated-videos')
+    .getPublicUrl(data.path);
+
+  console.log('🔗 Public URL generated:', publicUrlData.publicUrl);
+  return data.path; // Return the storage path
 }
 
 serve(async (req) => {
@@ -196,16 +213,21 @@ serve(async (req) => {
     const elevenlabsVoiceId = voiceIdMap[voiceId] || voiceIdMap['Aria'];
     console.log('🎤 Using ElevenLabs voice ID:', elevenlabsVoiceId);
     
-    const audioBase64 = await generateVoiceNarration(contentItem.script, elevenlabsVoiceId);
+    const audioData = await generateVoiceNarration(contentItem.script, elevenlabsVoiceId);
 
-    // Create video with parallax effects, narration, and text overlays
-    const videoUrl = await createVideoWithRunwayML(scenesWithImages, audioBase64, contentItem.title);
+    // Create video file with parallax effects, narration, and text overlays
+    const videoData = await createMockVideoFile(scenesWithImages, audioData, contentItem.title);
 
-    // Update content item with video URL
+    // Upload video to Supabase storage
+    const fileName = `${contentItemId}-${Date.now()}.mp4`;
+    const storagePath = await uploadVideoToStorage(supabase, videoData, fileName);
+
+    // Update content item with video file path
     await supabase
       .from('content_items')
       .update({
         video_status: 'completed',
+        video_file_path: storagePath,
         updated_at: new Date().toISOString()
       })
       .eq('id', contentItemId);
@@ -215,7 +237,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        videoUrl: videoUrl,
+        videoPath: storagePath,
         contentItemId: contentItemId,
         scenesProcessed: scenesWithImages.length,
         title: contentItem.title

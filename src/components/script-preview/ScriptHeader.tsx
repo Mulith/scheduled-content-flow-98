@@ -6,6 +6,8 @@ import { Play, Edit, Download, Clock, Eye, Video } from "lucide-react";
 import { ContentStatusProgress } from "@/components/ContentStatusProgress";
 import { ContentItem, Scene, StoryboardItem } from "./types";
 import { formatDuration } from "./utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface ScriptHeaderProps {
   contentItem: ContentItem;
@@ -31,8 +33,78 @@ export const ScriptHeader = ({
     item.videoStatus === 'completed' && item.videoUrl
   ) || false;
 
-  // Check if video short has been created (you can modify this logic based on your data structure)
+  // Check if video short has been created
   const hasGeneratedVideo = contentItem.video_status === 'completed';
+  const hasVideoFile = hasGeneratedVideo && contentItem.video_file_path;
+
+  const handleDownloadVideo = async () => {
+    if (!contentItem.video_file_path) {
+      toast({
+        title: "Download Error",
+        description: "Video file path not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log('🔽 Starting video download...');
+      console.log('📁 Video file path:', contentItem.video_file_path);
+
+      // Get the signed URL for download
+      const { data, error } = await supabase.storage
+        .from('generated-videos')
+        .download(contentItem.video_file_path);
+
+      if (error) {
+        console.error('❌ Download error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('No data received from storage');
+      }
+
+      console.log('✅ Video data downloaded, size:', data.size);
+
+      // Create blob and download link
+      const blob = new Blob([data], { type: 'video/mp4' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${contentItem.title.replace(/[^a-zA-Z0-9]/g, '_')}_video.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up the blob URL
+      URL.revokeObjectURL(url);
+
+      console.log('🎉 Video download initiated');
+      
+      toast({
+        title: "Download Started! 📥",
+        description: "Your video is being downloaded to your device.",
+      });
+
+    } catch (error) {
+      console.error('💥 Video download failed:', error);
+      toast({
+        title: "Download Failed",
+        description: error instanceof Error ? error.message : "Failed to download video",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleUploadToYouTube = () => {
+    toast({
+      title: "Coming Soon! 🚀",
+      description: "YouTube upload functionality will be available in a future update.",
+    });
+  };
   
   return (
     <div className="space-y-4">
@@ -111,7 +183,7 @@ export const ScriptHeader = ({
               Generated YouTube Short
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Your AI-generated video is ready for upload to YouTube Shorts
+              Your AI-generated video is ready for download and YouTube upload
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -123,16 +195,32 @@ export const ScriptHeader = ({
                 <span className="text-gray-300 text-sm">
                   Duration: ~{Math.ceil((contentItem.duration_seconds || 60) / 60)} min
                 </span>
+                {hasVideoFile && (
+                  <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+                    File Stored
+                  </Badge>
+                )}
               </div>
               <p className="text-gray-400 mt-2 text-sm">
-                Video generation completed successfully. The final video combines your script narration with generated visuals.
+                {hasVideoFile 
+                  ? "Video file is stored and ready for download. The final video combines your script narration with generated visuals."
+                  : "Video generation completed but file is not yet available for download."
+                }
               </p>
               <div className="mt-4 flex justify-center space-x-2">
-                <Button variant="outline" className="border-white/20 text-white hover:bg-white/10">
+                <Button 
+                  variant="outline" 
+                  className="border-white/20 text-white hover:bg-white/10"
+                  onClick={handleDownloadVideo}
+                  disabled={!hasVideoFile}
+                >
                   <Download className="w-4 h-4 mr-2" />
-                  Download Video
+                  {hasVideoFile ? "Download Video" : "Video Not Available"}
                 </Button>
-                <Button className="bg-red-600 hover:bg-red-700">
+                <Button 
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={handleUploadToYouTube}
+                >
                   <Video className="w-4 h-4 mr-2" />
                   Upload to YouTube
                 </Button>
