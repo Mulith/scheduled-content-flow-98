@@ -68,19 +68,16 @@ function prepareSceneData(scenes: Scene[]): SceneData[] {
       endTime: scene.end_time_seconds
     });
 
-    const rawImageUrl = scene.content_scene_videos?.[0]?.video_url;
+    const imageUrl = scene.content_scene_videos?.[0]?.video_url;
     
-    if (!rawImageUrl) {
+    if (!imageUrl) {
       console.warn(`⚠️ No image URL found for scene ${scene.scene_number}, skipping`);
       continue;
     }
 
-    // Convert CloudFront URL to public Supabase storage URL if needed
-    const imageUrl = convertToPublicStorageUrl(rawImageUrl);
-    console.log(`🔄 URL conversion for scene ${scene.scene_number}:`, {
-      original: rawImageUrl.substring(0, 100) + '...',
-      converted: imageUrl.substring(0, 100) + '...',
-      isConverted: rawImageUrl !== imageUrl
+    console.log(`🖼️ Scene ${scene.scene_number} using original image URL:`, {
+      url: imageUrl.substring(0, 100) + '...',
+      hasUrl: !!imageUrl
     });
 
     // Ensure timing values are valid numbers
@@ -104,7 +101,7 @@ function prepareSceneData(scenes: Scene[]): SceneData[] {
     }
 
     const sceneData: SceneData = {
-      imageUrl: imageUrl,
+      imageUrl: imageUrl, // Use original URL without conversion
       startTime: startTime,
       endTime: endTime,
       duration: duration,
@@ -117,46 +114,13 @@ function prepareSceneData(scenes: Scene[]): SceneData[] {
       timing: `${sceneData.startTime}s - ${sceneData.endTime}s`,
       duration: `${sceneData.duration}s`,
       hasImageUrl: !!sceneData.imageUrl,
-      hasNarration: !!sceneData.narrationText,
-      imageUrl: sceneData.imageUrl.substring(0, 100) + '...'
+      hasNarration: !!sceneData.narrationText
     });
 
     validScenes.push(sceneData);
   }
 
   return validScenes.sort((a, b) => a.sceneNumber - b.sceneNumber);
-}
-
-function convertToPublicStorageUrl(originalUrl: string): string {
-  // If it's already a Supabase storage URL, return as is
-  if (originalUrl.includes('supabase.co/storage/v1/object/public/')) {
-    return originalUrl;
-  }
-  
-  // If it's a CloudFront URL with JWT, try to extract the file path and convert to public URL
-  if (originalUrl.includes('cloudfront.net/') && originalUrl.includes('?_jwt=')) {
-    try {
-      // Extract the UUID filename from the CloudFront URL
-      const urlParts = originalUrl.split('/');
-      const filenamePart = urlParts[urlParts.length - 1];
-      const filename = filenamePart.split('?')[0]; // Remove JWT query params
-      
-      // Construct public Supabase storage URL
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      if (supabaseUrl && filename.includes('.')) {
-        const publicUrl = `${supabaseUrl}/storage/v1/object/public/generated-videos/${filename}`;
-        console.log(`🔄 Converted CloudFront URL to public storage URL:`, {
-          from: originalUrl.substring(0, 100) + '...',
-          to: publicUrl
-        });
-        return publicUrl;
-      }
-    } catch (error) {
-      console.warn(`⚠️ Failed to convert CloudFront URL, using original:`, error);
-    }
-  }
-  
-  return originalUrl;
 }
 
 function logSceneTimings(sceneData: SceneData[]): void {
@@ -186,7 +150,7 @@ function createFormData(audioData: Uint8Array, sceneData: SceneData[], title: st
     type: audioBlob.type
   });
   
-  // Prepare scenes data with explicit image URLs
+  // Prepare scenes data with original image URLs (no conversion)
   const scenesForFFmpeg = sceneData.map((scene, index) => {
     console.log(`🖼️ Scene ${index + 1} final image URL:`, scene.imageUrl);
     return {
@@ -234,20 +198,6 @@ function createFormData(audioData: Uint8Array, sceneData: SceneData[], title: st
   console.log('📝 Metadata added:', {
     title: title,
     totalDuration: totalDuration
-  });
-
-  // Final validation before sending
-  console.log('🔍 Final validation - FormData entries:');
-  const entries = Array.from(formData.entries());
-  entries.forEach(([key, value]) => {
-    if (key === 'scenes') {
-      const scenesData = JSON.parse(value as string);
-      console.log(`✅ ${key}: ${scenesData.length} scenes with URLs:`, 
-        scenesData.map((s: any, i: number) => `Scene ${i+1}: ${s.imageUrl ? 'Has URL' : 'Missing URL'}`).join(', ')
-      );
-    } else {
-      console.log(`✅ ${key}: ${typeof value === 'object' && 'size' in value ? `${value.size} bytes` : value.toString().substring(0, 50)}`);
-    }
   });
 
   return formData;
