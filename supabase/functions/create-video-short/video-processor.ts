@@ -109,7 +109,8 @@ function prepareSceneData(scenes: Scene[]): SceneData[] {
       timing: `${sceneData.startTime}s - ${sceneData.endTime}s`,
       duration: `${sceneData.duration}s`,
       hasImageUrl: !!sceneData.imageUrl,
-      hasNarration: !!sceneData.narrationText
+      hasNarration: !!sceneData.narrationText,
+      imageUrl: sceneData.imageUrl.substring(0, 100) + '...'
     });
 
     validScenes.push(sceneData);
@@ -137,7 +138,7 @@ function createFormData(audioData: Uint8Array, sceneData: SceneData[], title: st
     title: title
   });
   
-  // Add audio file
+  // Add audio file with proper filename and type
   const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
   formData.append('audio', audioBlob, 'narration.mp3');
   console.log('🎵 Audio blob created and added:', {
@@ -145,21 +146,25 @@ function createFormData(audioData: Uint8Array, sceneData: SceneData[], title: st
     type: audioBlob.type
   });
   
-  // Prepare scenes data in the format expected by FFmpeg service
-  const scenesForFFmpeg = sceneData.map(scene => ({
-    imageUrl: scene.imageUrl,
-    startTime: scene.startTime,
-    endTime: scene.endTime,
-    duration: scene.duration,
-    sceneNumber: scene.sceneNumber
-  }));
+  // Prepare scenes data with explicit image URLs
+  const scenesForFFmpeg = sceneData.map((scene, index) => {
+    console.log(`🖼️ Scene ${index + 1} image URL:`, scene.imageUrl);
+    return {
+      imageUrl: scene.imageUrl,
+      startTime: scene.startTime,
+      endTime: scene.endTime,
+      duration: scene.duration,
+      sceneNumber: scene.sceneNumber
+    };
+  });
   
   const scenesJson = JSON.stringify(scenesForFFmpeg);
   formData.append('scenes', scenesJson);
   console.log('📋 Scenes JSON prepared:', {
     length: scenesJson.length,
     preview: scenesJson.substring(0, 200) + '...',
-    parsedCount: scenesForFFmpeg.length
+    parsedCount: scenesForFFmpeg.length,
+    firstSceneImageUrl: scenesForFFmpeg[0]?.imageUrl ? 'Present' : 'Missing'
   });
   
   // Calculate total duration from the last scene's end time
@@ -168,8 +173,8 @@ function createFormData(audioData: Uint8Array, sceneData: SceneData[], title: st
   
   // Video configuration with proper settings
   const videoConfig: VideoConfig = {
-    parallaxSpeed: 0.2, // Even slower parallax for smoother effect
-    transitionDuration: 0.8, // Longer transitions for better flow
+    parallaxSpeed: 0.2,
+    transitionDuration: 0.8,
     enableAudioSync: true,
     totalDuration: totalDuration,
     frameRate: 30
@@ -189,6 +194,18 @@ function createFormData(audioData: Uint8Array, sceneData: SceneData[], title: st
   console.log('📝 Metadata added:', {
     title: title,
     totalDuration: totalDuration
+  });
+
+  // Enhanced logging for debugging
+  console.log('🔍 Detailed scene analysis:');
+  scenesForFFmpeg.forEach((scene, index) => {
+    console.log(`Scene ${index + 1}:`, {
+      sceneNumber: scene.sceneNumber,
+      hasImageUrl: !!scene.imageUrl,
+      imageUrlLength: scene.imageUrl?.length || 0,
+      timing: `${scene.startTime}s - ${scene.endTime}s`,
+      duration: `${scene.duration}s`
+    });
   });
 
   // Log all FormData entries for debugging

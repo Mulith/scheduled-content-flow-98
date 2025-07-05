@@ -71,6 +71,22 @@ export function validateContentItem(contentItem: ContentItem): void {
 
   console.log(`🖼️ Found ${scenesWithImages.length} scenes with generated images out of ${contentItem.content_scenes.length} total scenes`);
 
+  // Validate each scene's image URL
+  scenesWithImages.forEach((scene, index) => {
+    const imageUrl = scene.content_scene_videos?.[0]?.video_url;
+    console.log(`🔍 Scene ${index + 1} validation:`, {
+      sceneNumber: scene.scene_number,
+      hasImageUrl: !!imageUrl,
+      imageUrlValid: imageUrl ? isValidUrl(imageUrl) : false,
+      imageUrlLength: imageUrl?.length || 0,
+      imageUrlPreview: imageUrl ? imageUrl.substring(0, 100) + '...' : 'No URL'
+    });
+    
+    if (!imageUrl || !isValidUrl(imageUrl)) {
+      console.error(`❌ Invalid image URL for scene ${scene.scene_number}:`, imageUrl);
+    }
+  });
+
   // Validate scene timing information
   const timingErrors: string[] = [];
   
@@ -123,7 +139,7 @@ export function validateContentItem(contentItem: ContentItem): void {
     // Check for valid image URLs
     const imageUrl = scene.content_scene_videos?.[0]?.video_url;
     if (!imageUrl || !isValidUrl(imageUrl)) {
-      contentErrors.push(`Scene ${scene.scene_number}: Invalid or missing image URL`);
+      contentErrors.push(`Scene ${scene.scene_number}: Invalid or missing image URL - ${imageUrl || 'No URL'}`);
     }
   }
   
@@ -140,6 +156,7 @@ export function validateContentItem(contentItem: ContentItem): void {
       duration: Number(scene.end_time_seconds) - Number(scene.start_time_seconds),
       has_video: !!scene.content_scene_videos?.[0]?.video_url,
       video_status: scene.content_scene_videos?.[0]?.video_status,
+      video_url_preview: scene.content_scene_videos?.[0]?.video_url?.substring(0, 50) + '...',
       narration_length: scene.narration_text?.length || 0,
       visual_description_length: scene.visual_description?.length || 0
     });
