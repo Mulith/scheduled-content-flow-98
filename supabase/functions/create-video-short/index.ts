@@ -9,6 +9,8 @@ const corsHeaders = {
 
 interface Scene {
   scene_number: number;
+  start_time_seconds: number;
+  end_time_seconds: number;
   narration_text: string;
   visual_description: string;
   content_scene_videos?: {
@@ -75,41 +77,59 @@ async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Ar
   console.log('🔗 FFmpeg service URL:', ffmpegServiceUrl);
 
   try {
-    // Collect image URLs
-    const imageUrls: string[] = [];
-    for (let i = 0; i < scenes.length; i++) {
-      const scene = scenes[i];
+    // Prepare scene data with proper timing information
+    const sceneData = scenes.map(scene => {
       const imageUrl = scene.content_scene_videos?.[0]?.video_url;
       
-      if (imageUrl) {
-        console.log(`🔗 Adding image URL for scene ${i + 1}/${scenes.length}: ${imageUrl}`);
-        imageUrls.push(imageUrl);
-      } else {
-        console.warn(`⚠️ No image URL found for scene ${i + 1}`);
+      if (!imageUrl) {
+        console.warn(`⚠️ No image URL found for scene ${scene.scene_number}`);
+        return null;
       }
+
+      return {
+        imageUrl: imageUrl,
+        startTime: scene.start_time_seconds,
+        endTime: scene.end_time_seconds,
+        duration: scene.end_time_seconds - scene.start_time_seconds,
+        sceneNumber: scene.scene_number,
+        narrationText: scene.narration_text
+      };
+    }).filter(scene => scene !== null);
+
+    if (sceneData.length === 0) {
+      throw new Error('No valid scenes with images found');
     }
 
-    if (imageUrls.length === 0) {
-      throw new Error('No image URLs found in scenes');
-    }
+    console.log(`📋 Prepared ${sceneData.length} scenes with timing data`);
+    sceneData.forEach((scene, index) => {
+      console.log(`Scene ${index + 1}: ${scene.startTime}s - ${scene.endTime}s (${scene.duration}s)`);
+    });
 
-    console.log(`📋 Collected ${imageUrls.length} image URLs`);
-
-    // Create FormData with audio and image URLs
+    // Create FormData with enhanced parameters
     const formData = new FormData();
     
     // Add audio file
     formData.append('audio', new Blob([audioData], { type: 'audio/mpeg' }), 'audio.mp3');
     console.log('🎵 Audio added to form data, size:', audioData.length, 'bytes');
     
-    // Add image URLs as JSON string (matching your service expectation)
-    const imageUrlsJson = JSON.stringify(imageUrls);
-    formData.append('imageUrls', imageUrlsJson);
-    console.log(`📋 Added imageUrls parameter:`, imageUrlsJson);
+    // Add scene data with timing information
+    formData.append('scenes', JSON.stringify(sceneData));
+    console.log('📋 Added scene timing data');
+    
+    // Add video configuration
+    const videoConfig = {
+      parallaxSpeed: 0.3, // Slower parallax effect (was likely 1.0 or higher)
+      transitionDuration: 0.5, // Smooth transitions between scenes
+      enableAudioSync: true, // Ensure audio synchronization
+      totalDuration: scenes[scenes.length - 1]?.end_time_seconds || 30,
+      frameRate: 30 // Standard frame rate for smooth playback
+    };
+    
+    formData.append('config', JSON.stringify(videoConfig));
+    console.log('⚙️ Added video configuration:', videoConfig);
     
     // Add metadata
     formData.append('title', title);
-    formData.append('parallax', 'true');
     console.log('📝 Metadata added to form data');
 
     // Log all form data keys for debugging
@@ -240,6 +260,7 @@ serve(async (req) => {
         )
       `)
       .eq('id', contentItemId)
+      .order('scene_number', { foreignTable: 'content_scenes', ascending: true })
       .single() as { data: ContentItem | null, error: any };
 
     console.log('📊 Database query result:', {
@@ -271,12 +292,14 @@ serve(async (req) => {
 
     console.log(`🖼️ Found ${scenesWithImages.length} scenes with generated images`);
 
-    // Log detailed scene information
+    // Log detailed scene timing information
     scenesWithImages.forEach((scene, index) => {
       console.log(`Scene ${index + 1}:`, {
         scene_number: scene.scene_number,
+        timing: `${scene.start_time_seconds}s - ${scene.end_time_seconds}s`,
+        duration: scene.end_time_seconds - scene.start_time_seconds,
         has_video: !!scene.content_scene_videos?.[0]?.video_url,
-        video_url: scene.content_scene_videos?.[0]?.video_url
+        narration_preview: scene.narration_text.substring(0, 50) + '...'
       });
     });
 
@@ -294,8 +317,11 @@ serve(async (req) => {
     
     const audioData = await generateVoiceNarration(contentItem.script, elevenlabsVoiceId);
 
-    // Create video using external FFmpeg service
-    const videoData = await createVideoWithExternalFFmpeg(scenesWithImages, audioData, contentItem.title);
+    // Sort scenes by scene number to ensure proper order
+    const sortedScenes = scenesWithImages.sort((a, b) => a.scene_number - b.scene_number);
+    
+    // Create video using external FFmpeg service with proper timing
+    const videoData = await createVideoWithExternalFFmpeg(sortedScenes, audioData, contentItem.title);
 
     // Upload video to Supabase storage
     const fileName = `${contentItemId}-${Date.now()}.mp4`;
@@ -319,7 +345,8 @@ serve(async (req) => {
         videoPath: storagePath,
         contentItemId: contentItemId,
         scenesProcessed: scenesWithImages.length,
-        title: contentItem.title
+        title: contentItem.title,
+        totalDuration: sortedScenes[sortedScenes.length - 1]?.end_time_seconds || 30
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -345,3 +372,32 @@ serve(async (req) => {
     );
   }
 });
+
+async function uploadVideoToStorage(supabase: any, videoData: Uint8Array, fileName: string): Promise<string> {
+  console.log('☁️ Uploading video to Supabase storage...');
+  console.log('📁 File name:', fileName);
+  console.log('📊 File size:', videoData.length, 'bytes');
+
+  const { data, error } = await supabase.storage
+    .from('generated-videos')
+    .upload(fileName, videoData, {
+      contentType: 'video/mp4',
+      cacheControl: '3600',
+      upsert: false
+    });
+
+  if (error) {
+    console.error('❌ Storage upload error:', error);
+    throw new Error(`Failed to upload video: ${error.message}`);
+  }
+
+  console.log('✅ Video uploaded successfully:', data.path);
+  
+  // Get the public URL for the uploaded file
+  const { data: publicUrlData } = supabase.storage
+    .from('generated-videos')
+    .getPublicUrl(data.path);
+
+  console.log('🔗 Public URL generated:', publicUrlData.publicUrl);
+  return data.path; // Return the storage path
+}
