@@ -75,14 +75,7 @@ async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Ar
   console.log('🔗 FFmpeg service URL:', ffmpegServiceUrl);
 
   try {
-    // Create FormData with audio and image URLs
-    const formData = new FormData();
-    
-    // Add audio file
-    formData.append('audio', new Blob([audioData], { type: 'audio/mpeg' }), 'audio.mp3');
-    console.log('🎵 Audio added to form data');
-    
-    // Add image URLs instead of downloading and uploading images
+    // Collect image URLs
     const imageUrls: string[] = [];
     for (let i = 0; i < scenes.length; i++) {
       const scene = scenes[i];
@@ -91,17 +84,37 @@ async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Ar
       if (imageUrl) {
         console.log(`🔗 Adding image URL for scene ${i + 1}/${scenes.length}: ${imageUrl}`);
         imageUrls.push(imageUrl);
+      } else {
+        console.warn(`⚠️ No image URL found for scene ${i + 1}`);
       }
     }
+
+    if (imageUrls.length === 0) {
+      throw new Error('No image URLs found in scenes');
+    }
+
+    console.log(`📋 Collected ${imageUrls.length} image URLs`);
+
+    // Create FormData with audio and image URLs
+    const formData = new FormData();
     
-    // Send image URLs as JSON array
-    formData.append('imageUrls', JSON.stringify(imageUrls));
-    console.log(`📋 Added ${imageUrls.length} image URLs to form data`);
+    // Add audio file
+    formData.append('audio', new Blob([audioData], { type: 'audio/mpeg' }), 'audio.mp3');
+    console.log('🎵 Audio added to form data, size:', audioData.length, 'bytes');
+    
+    // Add image URLs as JSON string (matching your service expectation)
+    const imageUrlsJson = JSON.stringify(imageUrls);
+    formData.append('imageUrls', imageUrlsJson);
+    console.log(`📋 Added imageUrls parameter:`, imageUrlsJson);
     
     // Add metadata
     formData.append('title', title);
     formData.append('parallax', 'true');
     console.log('📝 Metadata added to form data');
+
+    // Log all form data keys for debugging
+    const formDataKeys = Array.from(formData.keys());
+    console.log('📋 FormData keys being sent:', formDataKeys);
 
     console.log('🚀 Sending request to FFmpeg service...');
     const response = await fetch(`${ffmpegServiceUrl}/create-video`, {
@@ -111,13 +124,17 @@ async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Ar
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ FFmpeg service error:', errorText);
+      console.error('❌ FFmpeg service error response:', errorText);
+      console.error('❌ Response status:', response.status);
+      console.error('❌ Response headers:', Object.fromEntries(response.headers.entries()));
       
       // Provide more specific error messaging
       if (response.status === 403) {
         throw new Error(`FFmpeg service authentication failed (403). Please check if the Cloud Run service allows unauthenticated requests or configure proper authentication. Error: ${errorText}`);
       } else if (response.status === 503) {
         throw new Error(`FFmpeg service unavailable (503). This might be due to billing account not being linked to your Google Cloud project. Error: ${errorText}`);
+      } else if (response.status === 400) {
+        throw new Error(`FFmpeg service bad request (400). Check if all required parameters are being sent correctly. Error: ${errorText}`);
       }
       
       throw new Error(`FFmpeg service failed: ${response.status} - ${errorText}`);
@@ -192,7 +209,8 @@ serve(async (req) => {
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseKey: !!supabaseKey,
       hasElevenlabsKey: !!elevenlabsKey,
-      hasFFmpegServiceUrl: !!ffmpegServiceUrl
+      hasFFmpegServiceUrl: !!ffmpegServiceUrl,
+      ffmpegServiceUrl: ffmpegServiceUrl // Log the actual URL for debugging
     });
 
     if (!supabaseUrl || !supabaseKey) {
@@ -227,7 +245,8 @@ serve(async (req) => {
     console.log('📊 Database query result:', {
       hasData: !!contentItem,
       error: error?.message,
-      contentItemTitle: contentItem?.title
+      contentItemTitle: contentItem?.title,
+      scenesCount: contentItem?.content_scenes?.length || 0
     });
 
     if (error || !contentItem) {
@@ -251,6 +270,15 @@ serve(async (req) => {
     }
 
     console.log(`🖼️ Found ${scenesWithImages.length} scenes with generated images`);
+
+    // Log detailed scene information
+    scenesWithImages.forEach((scene, index) => {
+      console.log(`Scene ${index + 1}:`, {
+        scene_number: scene.scene_number,
+        has_video: !!scene.content_scene_videos?.[0]?.video_url,
+        video_url: scene.content_scene_videos?.[0]?.video_url
+      });
+    });
 
     // Generate voice narration from the script
     const voiceIdMap: { [key: string]: string } = {
