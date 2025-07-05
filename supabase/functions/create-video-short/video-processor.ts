@@ -23,10 +23,19 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
     console.log(`📋 Prepared ${sceneData.length} scenes with timing data`);
     logSceneTimings(sceneData);
 
-    // Create FormData with enhanced parameters
+    // Create FormData with the exact structure expected by FFmpeg service
     const formData = createFormData(audioData, sceneData, title, scenes);
 
     console.log('🚀 Sending request to FFmpeg service...');
+    
+    // Log the request details for debugging
+    console.log('📊 Request details:', {
+      url: `${ffmpegServiceUrl}/create-video`,
+      audioSize: audioData.length,
+      scenesCount: sceneData.length,
+      title: title
+    });
+
     const response = await fetch(`${ffmpegServiceUrl}/create-video`, {
       method: 'POST',
       body: formData,
@@ -49,7 +58,16 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
 function prepareSceneData(scenes: Scene[]): SceneData[] {
   const validScenes: SceneData[] = [];
   
+  console.log('🔍 Preparing scene data from', scenes.length, 'scenes');
+  
   for (const scene of scenes) {
+    console.log(`Processing scene ${scene.scene_number}:`, {
+      hasVideos: !!scene.content_scene_videos,
+      videosCount: scene.content_scene_videos?.length || 0,
+      startTime: scene.start_time_seconds,
+      endTime: scene.end_time_seconds
+    });
+
     const imageUrl = scene.content_scene_videos?.[0]?.video_url;
     
     if (!imageUrl) {
@@ -57,88 +75,159 @@ function prepareSceneData(scenes: Scene[]): SceneData[] {
       continue;
     }
 
-    // Ensure timing values are numbers, not strings
+    // Ensure timing values are valid numbers
     const startTime = Number(scene.start_time_seconds);
     const endTime = Number(scene.end_time_seconds);
     
     if (isNaN(startTime) || isNaN(endTime)) {
-      console.warn(`⚠️ Invalid timing for scene ${scene.scene_number}, skipping`);
+      console.warn(`⚠️ Invalid timing for scene ${scene.scene_number}: start=${scene.start_time_seconds}, end=${scene.end_time_seconds}, skipping`);
       continue;
     }
 
-    validScenes.push({
+    if (startTime >= endTime) {
+      console.warn(`⚠️ Invalid timing sequence for scene ${scene.scene_number}: start (${startTime}) >= end (${endTime}), skipping`);
+      continue;
+    }
+
+    const duration = endTime - startTime;
+    if (duration <= 0) {
+      console.warn(`⚠️ Invalid duration for scene ${scene.scene_number}: ${duration}s, skipping`);
+      continue;
+    }
+
+    const sceneData: SceneData = {
       imageUrl: imageUrl,
       startTime: startTime,
       endTime: endTime,
-      duration: endTime - startTime,
+      duration: duration,
       sceneNumber: scene.scene_number,
       narrationText: scene.narration_text || ''
+    };
+
+    console.log(`✅ Valid scene data prepared:`, {
+      sceneNumber: sceneData.sceneNumber,
+      timing: `${sceneData.startTime}s - ${sceneData.endTime}s`,
+      duration: `${sceneData.duration}s`,
+      hasImageUrl: !!sceneData.imageUrl,
+      hasNarration: !!sceneData.narrationText
     });
+
+    validScenes.push(sceneData);
   }
 
   return validScenes.sort((a, b) => a.sceneNumber - b.sceneNumber);
 }
 
 function logSceneTimings(sceneData: SceneData[]): void {
+  console.log('📋 Final scene timing summary:');
   sceneData.forEach((scene, index) => {
     console.log(`Scene ${index + 1} (${scene.sceneNumber}): ${scene.startTime}s - ${scene.endTime}s (${scene.duration}s)`);
   });
+  
+  const totalDuration = sceneData.length > 0 ? Math.max(...sceneData.map(s => s.endTime)) : 0;
+  console.log(`🎬 Total video duration: ${totalDuration}s`);
 }
 
 function createFormData(audioData: Uint8Array, sceneData: SceneData[], title: string, scenes: Scene[]): FormData {
   const formData = new FormData();
   
+  console.log('📦 Creating FormData with:', {
+    audioSize: audioData.length,
+    scenesCount: sceneData.length,
+    title: title
+  });
+  
   // Add audio file
-  formData.append('audio', new Blob([audioData], { type: 'audio/mpeg' }), 'audio.mp3');
-  console.log('🎵 Audio added to form data, size:', audioData.length, 'bytes');
+  const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
+  formData.append('audio', audioBlob, 'narration.mp3');
+  console.log('🎵 Audio blob created and added:', {
+    size: audioBlob.size,
+    type: audioBlob.type
+  });
   
-  // Add scene data with timing information - ensure it's properly serialized
-  const scenesJson = JSON.stringify(sceneData);
+  // Prepare scenes data in the format expected by FFmpeg service
+  const scenesForFFmpeg = sceneData.map(scene => ({
+    imageUrl: scene.imageUrl,
+    startTime: scene.startTime,
+    endTime: scene.endTime,
+    duration: scene.duration,
+    sceneNumber: scene.sceneNumber
+  }));
+  
+  const scenesJson = JSON.stringify(scenesForFFmpeg);
   formData.append('scenes', scenesJson);
-  console.log('📋 Added scene timing data:', scenesJson.substring(0, 200) + '...');
+  console.log('📋 Scenes JSON prepared:', {
+    length: scenesJson.length,
+    preview: scenesJson.substring(0, 200) + '...',
+    parsedCount: scenesForFFmpeg.length
+  });
   
-  // Calculate total duration properly
+  // Calculate total duration from the last scene's end time
   const sortedScenes = scenes.sort((a, b) => a.scene_number - b.scene_number);
   const totalDuration = sortedScenes.length > 0 ? Number(sortedScenes[sortedScenes.length - 1].end_time_seconds) : 30;
   
-  // Add video configuration
+  // Video configuration with proper settings
   const videoConfig: VideoConfig = {
-    parallaxSpeed: 0.3, // Slower parallax effect
-    transitionDuration: 0.5, // Smooth transitions between scenes
-    enableAudioSync: true, // Ensure audio synchronization
+    parallaxSpeed: 0.2, // Even slower parallax for smoother effect
+    transitionDuration: 0.8, // Longer transitions for better flow
+    enableAudioSync: true,
     totalDuration: totalDuration,
-    frameRate: 30 // Standard frame rate for smooth playback
+    frameRate: 30
   };
   
   const configJson = JSON.stringify(videoConfig);
   formData.append('config', configJson);
-  console.log('⚙️ Added video configuration:', configJson);
+  console.log('⚙️ Video config prepared:', {
+    config: videoConfig,
+    jsonLength: configJson.length
+  });
   
-  // Add metadata
+  // Add title and metadata
   formData.append('title', title);
-  console.log('📝 Metadata added to form data');
+  formData.append('totalDuration', totalDuration.toString());
+  
+  console.log('📝 Metadata added:', {
+    title: title,
+    totalDuration: totalDuration
+  });
 
-  // Log all form data keys for debugging
-  const formDataKeys = Array.from(formData.keys());
-  console.log('📋 FormData keys being sent:', formDataKeys);
+  // Log all FormData entries for debugging
+  const entries = Array.from(formData.entries());
+  console.log('📋 FormData entries being sent:', entries.map(([key, value]) => ({
+    key,
+    valueType: typeof value,
+    size: value instanceof Blob ? value.size : value.toString().length
+  })));
 
   return formData;
 }
 
 async function handleFFmpegError(response: Response): Promise<never> {
-  const errorText = await response.text();
-  console.error('❌ FFmpeg service error response:', errorText);
-  console.error('❌ Response status:', response.status);
-  console.error('❌ Response headers:', Object.fromEntries(response.headers.entries()));
+  let errorText = '';
   
-  // Provide more specific error messaging
-  if (response.status === 403) {
+  try {
+    errorText = await response.text();
+  } catch (e) {
+    errorText = 'Unable to read error response';
+  }
+  
+  console.error('❌ FFmpeg service error details:', {
+    status: response.status,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries()),
+    body: errorText
+  });
+  
+  // Provide more specific error messaging based on status code
+  if (response.status === 400) {
+    throw new Error(`FFmpeg service bad request (400). The request data format is invalid. This could be due to missing or malformed scene data, audio data, or configuration. Server response: ${errorText}`);
+  } else if (response.status === 403) {
     throw new Error(`FFmpeg service authentication failed (403). Please check if the Cloud Run service allows unauthenticated requests or configure proper authentication. Error: ${errorText}`);
   } else if (response.status === 503) {
     throw new Error(`FFmpeg service unavailable (503). This might be due to billing account not being linked to your Google Cloud project. Error: ${errorText}`);
-  } else if (response.status === 400) {
-    throw new Error(`FFmpeg service bad request (400). Check if all required parameters are being sent correctly. Error: ${errorText}`);
+  } else if (response.status === 500) {
+    throw new Error(`FFmpeg service internal error (500). There was an error processing the video on the server side. Error: ${errorText}`);
   }
   
-  throw new Error(`FFmpeg service failed: ${response.status} - ${errorText}`);
+  throw new Error(`FFmpeg service failed with status ${response.status}: ${errorText}`);
 }
