@@ -76,22 +76,26 @@ async function downloadImage(url: string): Promise<Uint8Array> {
   return new Uint8Array(buffer);
 }
 
-async function createVideoWithFFmpeg(scenes: Scene[], audioData: Uint8Array, title: string): Promise<Uint8Array> {
-  console.log('🎬 Creating video with FFmpeg...');
+async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Array, title: string): Promise<Uint8Array> {
+  console.log('🎬 Calling external FFmpeg service...');
   console.log('🎞️ Processing', scenes.length, 'scenes');
   
-  // Create temporary directory for processing
-  const tempDir = await Deno.makeTempDir({ prefix: 'video_creation_' });
-  console.log('📁 Created temp directory:', tempDir);
-  
-  try {
-    // Save audio file
-    const audioPath = `${tempDir}/narration.mp3`;
-    await Deno.writeFile(audioPath, audioData);
-    console.log('🎵 Audio saved to:', audioPath);
+  const ffmpegServiceUrl = Deno.env.get('FFMPEG_SERVICE_URL');
+  if (!ffmpegServiceUrl) {
+    throw new Error('FFMPEG_SERVICE_URL environment variable not set');
+  }
 
-    // Download and save all scene images
-    const imagePaths: string[] = [];
+  console.log('🔗 FFmpeg service URL:', ffmpegServiceUrl);
+
+  try {
+    // Create FormData with audio and images
+    const formData = new FormData();
+    
+    // Add audio file
+    formData.append('audio', new Blob([audioData], { type: 'audio/mpeg' }), 'audio.mp3');
+    console.log('🎵 Audio added to form data');
+    
+    // Download and add images
     for (let i = 0; i < scenes.length; i++) {
       const scene = scenes[i];
       const imageUrl = scene.content_scene_videos?.[0]?.video_url;
@@ -99,85 +103,35 @@ async function createVideoWithFFmpeg(scenes: Scene[], audioData: Uint8Array, tit
       if (imageUrl) {
         console.log(`📸 Processing scene ${i + 1}/${scenes.length}`);
         const imageData = await downloadImage(imageUrl);
-        const imagePath = `${tempDir}/scene_${i.toString().padStart(3, '0')}.jpg`;
-        await Deno.writeFile(imagePath, imageData);
-        imagePaths.push(imagePath);
-        console.log(`✅ Scene ${i + 1} image saved`);
+        formData.append('images', new Blob([imageData], { type: 'image/jpeg' }), `scene-${i}.jpg`);
+        console.log(`✅ Scene ${i + 1} image added to form data`);
       }
     }
-
-    if (imagePaths.length === 0) {
-      throw new Error('No images found to create video');
-    }
-
-    // Create video using FFmpeg
-    const outputPath = `${tempDir}/output.mp4`;
-    console.log('🎬 Starting FFmpeg video creation...');
-
-    // Calculate duration per image (distribute evenly across scenes)
-    const totalDuration = Math.max(60, scenes.length * 8); // Minimum 60 seconds, or 8 seconds per scene
-    const durationPerImage = totalDuration / imagePaths.length;
-
-    // Create a text file listing all images with durations
-    const imageListPath = `${tempDir}/images.txt`;
-    const imageListContent = imagePaths
-      .map(path => `file '${path}'\nduration ${durationPerImage}`)
-      .join('\n') + '\n' + `file '${imagePaths[imagePaths.length - 1]}'`; // Repeat last image
     
-    await Deno.writeTextFile(imageListPath, imageListContent);
+    // Add metadata
+    formData.append('title', title);
+    formData.append('parallax', 'true');
+    console.log('📝 Metadata added to form data');
 
-    // FFmpeg command to create video from images and audio
-    const ffmpegArgs = [
-      '-f', 'concat',
-      '-safe', '0',
-      '-i', imageListPath,
-      '-i', audioPath,
-      '-c:v', 'libx264',
-      '-c:a', 'aac',
-      '-pix_fmt', 'yuv420p',
-      '-r', '1', // 1 frame per second for slideshow effect
-      '-shortest', // End when shortest input ends
-      '-y', // Overwrite output file
-      outputPath
-    ];
-
-    console.log('🚀 Running FFmpeg with args:', ffmpegArgs.join(' '));
-
-    const ffmpegProcess = new Deno.Command('ffmpeg', {
-      args: ffmpegArgs,
-      stdout: 'piped',
-      stderr: 'piped',
+    console.log('🚀 Sending request to FFmpeg service...');
+    const response = await fetch(`${ffmpegServiceUrl}/create-video`, {
+      method: 'POST',
+      body: formData,
     });
 
-    const { code, stdout, stderr } = await ffmpegProcess.output();
-    
-    const stdoutText = new TextDecoder().decode(stdout);
-    const stderrText = new TextDecoder().decode(stderr);
-    
-    console.log('📊 FFmpeg stdout:', stdoutText);
-    console.log('📊 FFmpeg stderr:', stderrText);
-
-    if (code !== 0) {
-      throw new Error(`FFmpeg failed with code ${code}: ${stderrText}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ FFmpeg service error:', errorText);
+      throw new Error(`FFmpeg service failed: ${response.status} - ${errorText}`);
     }
 
-    // Read the generated video file
-    const videoData = await Deno.readFile(outputPath);
-    console.log('✅ Video created successfully, size:', videoData.length, 'bytes');
-
-    return videoData;
+    const videoBuffer = await response.arrayBuffer();
+    console.log('✅ Video received from external FFmpeg service, size:', videoBuffer.byteLength, 'bytes');
+    return new Uint8Array(videoBuffer);
 
   } catch (error) {
-    console.error('❌ Error in video creation:', error);
+    console.error('❌ Error in external FFmpeg video creation:', error);
     throw error;
-  } finally {
-    // Clean up temporary directory
-    try {
-      await Deno.remove(tempDir, { recursive: true });
-      console.log('🧹 Cleaned up temp directory');
-    } catch (cleanupError) {
-      console.warn('⚠️ Failed to clean up temp directory:', cleanupError);
-    }
   }
 }
 
@@ -234,11 +188,13 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const elevenlabsKey = Deno.env.get('ELEVENLABS_API_KEY');
+    const ffmpegServiceUrl = Deno.env.get('FFMPEG_SERVICE_URL');
     
     console.log('🔑 Environment check:', {
       hasSupabaseUrl: !!supabaseUrl,
       hasSupabaseKey: !!supabaseKey,
-      hasElevenlabsKey: !!elevenlabsKey
+      hasElevenlabsKey: !!elevenlabsKey,
+      hasFFmpegServiceUrl: !!ffmpegServiceUrl
     });
 
     if (!supabaseUrl || !supabaseKey) {
@@ -249,16 +205,8 @@ serve(async (req) => {
       throw new Error('Missing ElevenLabs API key');
     }
 
-    // Check if FFmpeg is available
-    try {
-      const ffmpegCheck = new Deno.Command('ffmpeg', { args: ['-version'] });
-      const { code } = await ffmpegCheck.output();
-      if (code !== 0) {
-        throw new Error('FFmpeg not available');
-      }
-      console.log('✅ FFmpeg is available');
-    } catch (error) {
-      throw new Error('FFmpeg is not installed or not available in PATH');
+    if (!ffmpegServiceUrl) {
+      throw new Error('Missing FFmpeg service URL');
     }
 
     // Initialize Supabase client
@@ -320,8 +268,8 @@ serve(async (req) => {
     
     const audioData = await generateVoiceNarration(contentItem.script, elevenlabsVoiceId);
 
-    // Create video using FFmpeg
-    const videoData = await createVideoWithFFmpeg(scenesWithImages, audioData, contentItem.title);
+    // Create video using external FFmpeg service
+    const videoData = await createVideoWithExternalFFmpeg(scenesWithImages, audioData, contentItem.title);
 
     // Upload video to Supabase storage
     const fileName = `${contentItemId}-${Date.now()}.mp4`;
