@@ -47,28 +47,41 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
 }
 
 function prepareSceneData(scenes: Scene[]): SceneData[] {
-  return scenes.map(scene => {
+  const validScenes: SceneData[] = [];
+  
+  for (const scene of scenes) {
     const imageUrl = scene.content_scene_videos?.[0]?.video_url;
     
     if (!imageUrl) {
-      console.warn(`⚠️ No image URL found for scene ${scene.scene_number}`);
-      return null;
+      console.warn(`⚠️ No image URL found for scene ${scene.scene_number}, skipping`);
+      continue;
     }
 
-    return {
+    // Ensure timing values are numbers, not strings
+    const startTime = Number(scene.start_time_seconds);
+    const endTime = Number(scene.end_time_seconds);
+    
+    if (isNaN(startTime) || isNaN(endTime)) {
+      console.warn(`⚠️ Invalid timing for scene ${scene.scene_number}, skipping`);
+      continue;
+    }
+
+    validScenes.push({
       imageUrl: imageUrl,
-      startTime: scene.start_time_seconds,
-      endTime: scene.end_time_seconds,
-      duration: scene.end_time_seconds - scene.start_time_seconds,
+      startTime: startTime,
+      endTime: endTime,
+      duration: endTime - startTime,
       sceneNumber: scene.scene_number,
-      narrationText: scene.narration_text
-    };
-  }).filter(scene => scene !== null);
+      narrationText: scene.narration_text || ''
+    });
+  }
+
+  return validScenes.sort((a, b) => a.sceneNumber - b.sceneNumber);
 }
 
 function logSceneTimings(sceneData: SceneData[]): void {
   sceneData.forEach((scene, index) => {
-    console.log(`Scene ${index + 1}: ${scene.startTime}s - ${scene.endTime}s (${scene.duration}s)`);
+    console.log(`Scene ${index + 1} (${scene.sceneNumber}): ${scene.startTime}s - ${scene.endTime}s (${scene.duration}s)`);
   });
 }
 
@@ -79,21 +92,27 @@ function createFormData(audioData: Uint8Array, sceneData: SceneData[], title: st
   formData.append('audio', new Blob([audioData], { type: 'audio/mpeg' }), 'audio.mp3');
   console.log('🎵 Audio added to form data, size:', audioData.length, 'bytes');
   
-  // Add scene data with timing information
-  formData.append('scenes', JSON.stringify(sceneData));
-  console.log('📋 Added scene timing data');
+  // Add scene data with timing information - ensure it's properly serialized
+  const scenesJson = JSON.stringify(sceneData);
+  formData.append('scenes', scenesJson);
+  console.log('📋 Added scene timing data:', scenesJson.substring(0, 200) + '...');
+  
+  // Calculate total duration properly
+  const sortedScenes = scenes.sort((a, b) => a.scene_number - b.scene_number);
+  const totalDuration = sortedScenes.length > 0 ? Number(sortedScenes[sortedScenes.length - 1].end_time_seconds) : 30;
   
   // Add video configuration
   const videoConfig: VideoConfig = {
     parallaxSpeed: 0.3, // Slower parallax effect
     transitionDuration: 0.5, // Smooth transitions between scenes
     enableAudioSync: true, // Ensure audio synchronization
-    totalDuration: scenes[scenes.length - 1]?.end_time_seconds || 30,
+    totalDuration: totalDuration,
     frameRate: 30 // Standard frame rate for smooth playback
   };
   
-  formData.append('config', JSON.stringify(videoConfig));
-  console.log('⚙️ Added video configuration:', videoConfig);
+  const configJson = JSON.stringify(videoConfig);
+  formData.append('config', configJson);
+  console.log('⚙️ Added video configuration:', configJson);
   
   // Add metadata
   formData.append('title', title);

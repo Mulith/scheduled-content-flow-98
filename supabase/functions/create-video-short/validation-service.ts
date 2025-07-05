@@ -29,6 +29,12 @@ export function validateEnvironmentVariables(): void {
 }
 
 export function validateContentItem(contentItem: ContentItem): void {
+  console.log('🔍 Validating content item:', contentItem.id);
+  
+  if (!contentItem.content_scenes || contentItem.content_scenes.length === 0) {
+    throw new Error('No scenes found for this content item');
+  }
+
   // Check if we have generated images for all scenes
   const scenesWithImages = contentItem.content_scenes.filter(scene => 
     scene.content_scene_videos?.some(video => 
@@ -40,14 +46,32 @@ export function validateContentItem(contentItem: ContentItem): void {
     throw new Error('No generated images found. Please generate scene images first.');
   }
 
-  console.log(`🖼️ Found ${scenesWithImages.length} scenes with generated images`);
+  console.log(`🖼️ Found ${scenesWithImages.length} scenes with generated images out of ${contentItem.content_scenes.length} total scenes`);
+
+  // Validate scene timing information
+  for (const scene of scenesWithImages) {
+    const startTime = Number(scene.start_time_seconds);
+    const endTime = Number(scene.end_time_seconds);
+    
+    if (isNaN(startTime) || isNaN(endTime)) {
+      throw new Error(`Invalid timing data for scene ${scene.scene_number}: start=${scene.start_time_seconds}, end=${scene.end_time_seconds}`);
+    }
+    
+    if (startTime >= endTime) {
+      throw new Error(`Invalid timing for scene ${scene.scene_number}: start time (${startTime}s) must be less than end time (${endTime}s)`);
+    }
+    
+    if (startTime < 0 || endTime < 0) {
+      throw new Error(`Invalid timing for scene ${scene.scene_number}: times cannot be negative`);
+    }
+  }
 
   // Log detailed scene timing information
   scenesWithImages.forEach((scene, index) => {
     console.log(`Scene ${index + 1}:`, {
       scene_number: scene.scene_number,
       timing: `${scene.start_time_seconds}s - ${scene.end_time_seconds}s`,
-      duration: scene.end_time_seconds - scene.start_time_seconds,
+      duration: Number(scene.end_time_seconds) - Number(scene.start_time_seconds),
       has_video: !!scene.content_scene_videos?.[0]?.video_url,
       narration_preview: scene.narration_text.substring(0, 50) + '...'
     });
@@ -64,6 +88,6 @@ export function getVoiceId(voiceId: string): string {
   };
 
   const elevenlabsVoiceId = voiceIdMap[voiceId] || voiceIdMap['Aria'];
-  console.log('🎤 Using ElevenLabs voice ID:', elevenlabsVoiceId);
+  console.log('🎤 Using ElevenLabs voice ID:', elevenlabsVoiceId, 'for voice:', voiceId);
   return elevenlabsVoiceId;
 }
