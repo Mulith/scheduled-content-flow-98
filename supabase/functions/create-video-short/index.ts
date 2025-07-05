@@ -24,41 +24,6 @@ interface ContentItem {
   content_scenes: Scene[];
 }
 
-async function getGoogleCloudToken(): Promise<string | null> {
-  const serviceAccountKey = Deno.env.get('GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY');
-  if (!serviceAccountKey) {
-    console.log('⚠️ No Google Cloud service account key found, trying without authentication');
-    return null;
-  }
-
-  try {
-    const keyData = JSON.parse(serviceAccountKey);
-    
-    // Create JWT for Google Cloud authentication
-    const now = Math.floor(Date.now() / 1000);
-    const header = {
-      alg: 'RS256',
-      typ: 'JWT'
-    };
-    
-    const payload = {
-      iss: keyData.client_email,
-      scope: 'https://www.googleapis.com/auth/cloud-platform',
-      aud: 'https://oauth2.googleapis.com/token',
-      exp: now + 3600,
-      iat: now
-    };
-    
-    // For simplicity, we'll use a different approach
-    // This would normally require JWT signing with RS256
-    console.log('🔑 Service account authentication would be implemented here');
-    return null;
-  } catch (error) {
-    console.error('❌ Error parsing service account key:', error);
-    return null;
-  }
-}
-
 async function generateVoiceNarration(text: string, voiceId: string): Promise<Uint8Array> {
   console.log('🎙️ Generating voice narration with ElevenLabs...');
   console.log('🎙️ Voice ID:', voiceId);
@@ -98,19 +63,6 @@ async function generateVoiceNarration(text: string, voiceId: string): Promise<Ui
   return new Uint8Array(audioBuffer);
 }
 
-async function downloadImage(url: string): Promise<Uint8Array> {
-  console.log('📥 Downloading image:', url);
-  
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to download image: ${response.status}`);
-  }
-  
-  const buffer = await response.arrayBuffer();
-  console.log('✅ Image downloaded, size:', buffer.byteLength);
-  return new Uint8Array(buffer);
-}
-
 async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Array, title: string): Promise<Uint8Array> {
   console.log('🎬 Calling external FFmpeg service...');
   console.log('🎞️ Processing', scenes.length, 'scenes');
@@ -123,45 +75,37 @@ async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Ar
   console.log('🔗 FFmpeg service URL:', ffmpegServiceUrl);
 
   try {
-    // Get authentication token if available
-    const authToken = await getGoogleCloudToken();
-    
-    // Create FormData with audio and images
+    // Create FormData with audio and image URLs
     const formData = new FormData();
     
     // Add audio file
     formData.append('audio', new Blob([audioData], { type: 'audio/mpeg' }), 'audio.mp3');
     console.log('🎵 Audio added to form data');
     
-    // Download and add images
+    // Add image URLs instead of downloading and uploading images
+    const imageUrls: string[] = [];
     for (let i = 0; i < scenes.length; i++) {
       const scene = scenes[i];
       const imageUrl = scene.content_scene_videos?.[0]?.video_url;
       
       if (imageUrl) {
-        console.log(`📸 Processing scene ${i + 1}/${scenes.length}`);
-        const imageData = await downloadImage(imageUrl);
-        formData.append('images', new Blob([imageData], { type: 'image/jpeg' }), `scene-${i}.jpg`);
-        console.log(`✅ Scene ${i + 1} image added to form data`);
+        console.log(`🔗 Adding image URL for scene ${i + 1}/${scenes.length}: ${imageUrl}`);
+        imageUrls.push(imageUrl);
       }
     }
+    
+    // Send image URLs as JSON array
+    formData.append('imageUrls', JSON.stringify(imageUrls));
+    console.log(`📋 Added ${imageUrls.length} image URLs to form data`);
     
     // Add metadata
     formData.append('title', title);
     formData.append('parallax', 'true');
     console.log('📝 Metadata added to form data');
 
-    // Prepare headers
-    const headers: HeadersInit = {};
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-      console.log('🔐 Added authentication header');
-    }
-
     console.log('🚀 Sending request to FFmpeg service...');
     const response = await fetch(`${ffmpegServiceUrl}/create-video`, {
       method: 'POST',
-      headers,
       body: formData,
     });
 
@@ -172,6 +116,8 @@ async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Ar
       // Provide more specific error messaging
       if (response.status === 403) {
         throw new Error(`FFmpeg service authentication failed (403). Please check if the Cloud Run service allows unauthenticated requests or configure proper authentication. Error: ${errorText}`);
+      } else if (response.status === 503) {
+        throw new Error(`FFmpeg service unavailable (503). This might be due to billing account not being linked to your Google Cloud project. Error: ${errorText}`);
       }
       
       throw new Error(`FFmpeg service failed: ${response.status} - ${errorText}`);
