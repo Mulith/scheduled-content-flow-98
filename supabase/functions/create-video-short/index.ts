@@ -24,6 +24,41 @@ interface ContentItem {
   content_scenes: Scene[];
 }
 
+async function getGoogleCloudToken(): Promise<string | null> {
+  const serviceAccountKey = Deno.env.get('GOOGLE_CLOUD_SERVICE_ACCOUNT_KEY');
+  if (!serviceAccountKey) {
+    console.log('⚠️ No Google Cloud service account key found, trying without authentication');
+    return null;
+  }
+
+  try {
+    const keyData = JSON.parse(serviceAccountKey);
+    
+    // Create JWT for Google Cloud authentication
+    const now = Math.floor(Date.now() / 1000);
+    const header = {
+      alg: 'RS256',
+      typ: 'JWT'
+    };
+    
+    const payload = {
+      iss: keyData.client_email,
+      scope: 'https://www.googleapis.com/auth/cloud-platform',
+      aud: 'https://oauth2.googleapis.com/token',
+      exp: now + 3600,
+      iat: now
+    };
+    
+    // For simplicity, we'll use a different approach
+    // This would normally require JWT signing with RS256
+    console.log('🔑 Service account authentication would be implemented here');
+    return null;
+  } catch (error) {
+    console.error('❌ Error parsing service account key:', error);
+    return null;
+  }
+}
+
 async function generateVoiceNarration(text: string, voiceId: string): Promise<Uint8Array> {
   console.log('🎙️ Generating voice narration with ElevenLabs...');
   console.log('🎙️ Voice ID:', voiceId);
@@ -88,6 +123,9 @@ async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Ar
   console.log('🔗 FFmpeg service URL:', ffmpegServiceUrl);
 
   try {
+    // Get authentication token if available
+    const authToken = await getGoogleCloudToken();
+    
     // Create FormData with audio and images
     const formData = new FormData();
     
@@ -113,15 +151,29 @@ async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: Uint8Ar
     formData.append('parallax', 'true');
     console.log('📝 Metadata added to form data');
 
+    // Prepare headers
+    const headers: HeadersInit = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+      console.log('🔐 Added authentication header');
+    }
+
     console.log('🚀 Sending request to FFmpeg service...');
     const response = await fetch(`${ffmpegServiceUrl}/create-video`, {
       method: 'POST',
+      headers,
       body: formData,
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('❌ FFmpeg service error:', errorText);
+      
+      // Provide more specific error messaging
+      if (response.status === 403) {
+        throw new Error(`FFmpeg service authentication failed (403). Please check if the Cloud Run service allows unauthenticated requests or configure proper authentication. Error: ${errorText}`);
+      }
+      
       throw new Error(`FFmpeg service failed: ${response.status} - ${errorText}`);
     }
 
