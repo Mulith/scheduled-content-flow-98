@@ -49,28 +49,30 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
     console.log('🖼️ Image URLs:', imageUrls);
     console.log('⏱️ Durations:', durations);
 
-    // Create FormData with the correct parameter names expected by the API
+    // Create FormData with the correct structure expected by multer
     const formData = new FormData();
     
-    // Add audio file with the correct parameter name
+    // Add audio file with the correct field name for multer
     const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
     formData.append('audioFile', audioBlob, 'audio.mp3');
     console.log('🎵 Audio file added to form data, size:', audioData.length, 'bytes');
     
-    // Add image URLs as JSON array
-    formData.append('imageUrls', JSON.stringify(imageUrls));
-    console.log('🖼️ Added image URLs:', JSON.stringify(imageUrls));
+    // Add parameters as individual form fields (not JSON strings)
+    // The FFmpeg service parses these from req.body after multer processes the form
+    imageUrls.forEach((url, index) => {
+      formData.append(`imageUrls[${index}]`, url);
+    });
     
-    // Add durations as JSON array
-    formData.append('durations', JSON.stringify(durations));
-    console.log('⏱️ Added durations:', JSON.stringify(durations));
+    durations.forEach((duration, index) => {
+      formData.append(`durations[${index}]`, duration.toString());
+    });
     
-    // Add optional parameters
-    formData.append('transition', 'fade'); // Default transition effect
-    formData.append('fps', '30'); // Frame rate
+    // Add optional configuration parameters as form fields
+    formData.append('transition', 'fade');
+    formData.append('fps', '30');
     formData.append('resolution', '1080x1920'); // Vertical video for YouTube Shorts
     
-    console.log('⚙️ Added video configuration parameters');
+    console.log('⚙️ Added all parameters as form fields');
 
     // Log all form data entries for debugging
     const formDataEntries = [];
@@ -78,7 +80,7 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
       if (key === 'audioFile') {
         formDataEntries.push(`${key}: [Blob ${(value as Blob).size} bytes]`);
       } else {
-        formDataEntries.push(`${key}: ${typeof value === 'string' ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : value}`);
+        formDataEntries.push(`${key}: ${value}`);
       }
     }
     console.log('📋 FormData entries being sent:', formDataEntries);
