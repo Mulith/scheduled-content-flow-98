@@ -23,70 +23,62 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
   console.log('🔗 FFmpeg service URL:', ffmpegServiceUrl);
 
   try {
-    // Prepare scene data with proper timing information
-    const sceneData = scenes.map(scene => {
+    // Prepare image URLs and durations arrays as expected by the API
+    const imageUrls: string[] = [];
+    const durations: number[] = [];
+    
+    scenes.forEach(scene => {
       const imageUrl = scene.content_scene_videos?.[0]?.video_url;
       
       if (!imageUrl) {
         console.warn(`⚠️ No image URL found for scene ${scene.scene_number}`);
-        return null;
+        return;
       }
 
-      return {
-        imageUrl: imageUrl,
-        startTime: scene.start_time_seconds,
-        endTime: scene.end_time_seconds,
-        duration: scene.end_time_seconds - scene.start_time_seconds,
-        sceneNumber: scene.scene_number,
-        narrationText: scene.narration_text
-      };
-    }).filter(scene => scene !== null);
+      imageUrls.push(imageUrl);
+      durations.push(scene.end_time_seconds - scene.start_time_seconds);
+      
+      console.log(`Scene ${scene.scene_number}: ${imageUrl} (${scene.end_time_seconds - scene.start_time_seconds}s)`);
+    });
 
-    if (sceneData.length === 0) {
+    if (imageUrls.length === 0) {
       throw new Error('No valid scenes with images found');
     }
 
-    console.log(`📋 Prepared ${sceneData.length} scenes with timing data`);
-    sceneData.forEach((scene, index) => {
-      console.log(`Scene ${index + 1}: ${scene.startTime}s - ${scene.endTime}s (${scene.duration}s)`);
-      console.log(`Image URL: ${scene.imageUrl}`);
-    });
+    console.log(`📋 Prepared ${imageUrls.length} image URLs and durations`);
+    console.log('🖼️ Image URLs:', imageUrls);
+    console.log('⏱️ Durations:', durations);
 
-    // Create FormData with enhanced parameters
+    // Create FormData with the correct parameter names expected by the API
     const formData = new FormData();
     
-    // Add audio file - make sure it's properly formatted
+    // Add audio file with the correct parameter name
     const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
-    formData.append('audio', audioBlob, 'audio.mp3');
-    console.log('🎵 Audio added to form data, size:', audioData.length, 'bytes');
+    formData.append('audioFile', audioBlob, 'audio.mp3');
+    console.log('🎵 Audio file added to form data, size:', audioData.length, 'bytes');
     
-    // Add scene data with timing information
-    formData.append('scenes', JSON.stringify(sceneData));
-    console.log('📋 Added scene timing data:', JSON.stringify(sceneData, null, 2));
+    // Add image URLs as JSON array
+    formData.append('imageUrls', JSON.stringify(imageUrls));
+    console.log('🖼️ Added image URLs:', JSON.stringify(imageUrls));
     
-    // Add video configuration
-    const videoConfig = {
-      parallaxSpeed: 0.3, // Slower parallax effect (was likely 1.0 or higher)
-      transitionDuration: 0.5, // Smooth transitions between scenes
-      enableAudioSync: true, // Ensure audio synchronization
-      totalDuration: scenes[scenes.length - 1]?.end_time_seconds || 30,
-      frameRate: 30 // Standard frame rate for smooth playback
-    };
+    // Add durations as JSON array
+    formData.append('durations', JSON.stringify(durations));
+    console.log('⏱️ Added durations:', JSON.stringify(durations));
     
-    formData.append('config', JSON.stringify(videoConfig));
-    console.log('⚙️ Added video configuration:', videoConfig);
+    // Add optional parameters
+    formData.append('transition', 'fade'); // Default transition effect
+    formData.append('fps', '30'); // Frame rate
+    formData.append('resolution', '1080x1920'); // Vertical video for YouTube Shorts
     
-    // Add metadata
-    formData.append('title', title);
-    console.log('📝 Metadata added to form data');
+    console.log('⚙️ Added video configuration parameters');
 
-    // Log all form data keys for debugging
+    // Log all form data entries for debugging
     const formDataEntries = [];
     for (const [key, value] of formData.entries()) {
-      if (key === 'audio') {
+      if (key === 'audioFile') {
         formDataEntries.push(`${key}: [Blob ${(value as Blob).size} bytes]`);
       } else {
-        formDataEntries.push(`${key}: ${typeof value === 'string' ? value.substring(0, 100) + '...' : value}`);
+        formDataEntries.push(`${key}: ${typeof value === 'string' ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : value}`);
       }
     }
     console.log('📋 FormData entries being sent:', formDataEntries);
