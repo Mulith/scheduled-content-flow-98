@@ -49,18 +49,20 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
     console.log(`📋 Prepared ${sceneData.length} scenes with timing data`);
     sceneData.forEach((scene, index) => {
       console.log(`Scene ${index + 1}: ${scene.startTime}s - ${scene.endTime}s (${scene.duration}s)`);
+      console.log(`Image URL: ${scene.imageUrl}`);
     });
 
     // Create FormData with enhanced parameters
     const formData = new FormData();
     
-    // Add audio file
-    formData.append('audio', new Blob([audioData], { type: 'audio/mpeg' }), 'audio.mp3');
+    // Add audio file - make sure it's properly formatted
+    const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
+    formData.append('audio', audioBlob, 'audio.mp3');
     console.log('🎵 Audio added to form data, size:', audioData.length, 'bytes');
     
     // Add scene data with timing information
     formData.append('scenes', JSON.stringify(sceneData));
-    console.log('📋 Added scene timing data');
+    console.log('📋 Added scene timing data:', JSON.stringify(sceneData, null, 2));
     
     // Add video configuration
     const videoConfig = {
@@ -79,8 +81,15 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
     console.log('📝 Metadata added to form data');
 
     // Log all form data keys for debugging
-    const formDataKeys = Array.from(formData.keys());
-    console.log('📋 FormData keys being sent:', formDataKeys);
+    const formDataEntries = [];
+    for (const [key, value] of formData.entries()) {
+      if (key === 'audio') {
+        formDataEntries.push(`${key}: [Blob ${(value as Blob).size} bytes]`);
+      } else {
+        formDataEntries.push(`${key}: ${typeof value === 'string' ? value.substring(0, 100) + '...' : value}`);
+      }
+    }
+    console.log('📋 FormData entries being sent:', formDataEntries);
 
     console.log('🚀 Sending request to FFmpeg service...');
     const response = await fetch(`${ffmpegServiceUrl}/create-video`, {

@@ -53,6 +53,7 @@ export async function processVideoCreation(
       timing: `${scene.start_time_seconds}s - ${scene.end_time_seconds}s`,
       duration: scene.end_time_seconds - scene.start_time_seconds,
       has_video: !!scene.content_scene_videos?.[0]?.video_url,
+      video_url: scene.content_scene_videos?.[0]?.video_url,
       narration_preview: scene.narration_text.substring(0, 50) + '...'
     });
   });
@@ -69,13 +70,18 @@ export async function processVideoCreation(
   const elevenlabsVoiceId = voiceIdMap[voiceId] || voiceIdMap['Aria'];
   console.log('🎤 Using ElevenLabs voice ID:', elevenlabsVoiceId);
   
+  console.log('🎤 Generating audio for script:', contentItem.script.substring(0, 100) + '...');
   const audioData = await generateVoiceNarration(contentItem.script, elevenlabsVoiceId);
+  console.log('🎵 Generated audio data size:', audioData.length, 'bytes');
 
   // Sort scenes by scene number to ensure proper order
   const sortedScenes = scenesWithImages.sort((a, b) => a.scene_number - b.scene_number);
+  console.log('📋 Sorted scenes for video creation:', sortedScenes.length);
   
   // Create video using external FFmpeg service with proper timing
+  console.log('🎬 Creating video with FFmpeg service...');
   const videoData = await createVideoWithExternalFFmpeg(sortedScenes, audioData, contentItem.title);
+  console.log('✅ Video created successfully, size:', videoData.length, 'bytes');
 
   // Upload video to Supabase storage
   const fileName = `${contentItem.id}-${Date.now()}.mp4`;
