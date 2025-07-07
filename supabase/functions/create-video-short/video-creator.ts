@@ -49,46 +49,26 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
     console.log('🖼️ Image URLs:', imageUrls);
     console.log('⏱️ Durations:', durations);
 
-    // Create FormData with the correct structure expected by multer
-    const formData = new FormData();
-    
-    // Add audio file with the correct field name for multer
-    const audioBlob = new Blob([audioData], { type: 'audio/mpeg' });
-    formData.append('audioFile', audioBlob, 'audio.mp3');
-    console.log('🎵 Audio file added to form data, size:', audioData.length, 'bytes');
-    
-    // Add parameters as individual form fields (not JSON strings)
-    // The FFmpeg service parses these from req.body after multer processes the form
-    imageUrls.forEach((url, index) => {
-      formData.append(`imageUrls[${index}]`, url);
-    });
-    
-    durations.forEach((duration, index) => {
-      formData.append(`durations[${index}]`, duration.toString());
-    });
-    
-    // Add optional configuration parameters as form fields
-    formData.append('transition', 'fade');
-    formData.append('fps', '30');
-    formData.append('resolution', '1080x1920'); // Vertical video for YouTube Shorts
-    
-    console.log('⚙️ Added all parameters as form fields');
+    // Convert audio data to base64
+    const audioBase64 = btoa(String.fromCharCode.apply(null, audioData));
 
-    // Log all form data entries for debugging
-    const formDataEntries = [];
-    for (const [key, value] of formData.entries()) {
-      if (key === 'audioFile') {
-        formDataEntries.push(`${key}: [Blob ${(value as Blob).size} bytes]`);
-      } else {
-        formDataEntries.push(`${key}: ${value}`);
-      }
-    }
-    console.log('📋 FormData entries being sent:', formDataEntries);
+    const payload = {
+      imageUrls,
+      durations,
+      audioBase64,
+      transition: 'fade',
+      fps: '30',
+      resolution: '1080x1920',
+      title,
+    };
 
     console.log('🚀 Sending request to FFmpeg service...');
     const response = await fetch(`${ffmpegServiceUrl}/create-video`, {
       method: 'POST',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
