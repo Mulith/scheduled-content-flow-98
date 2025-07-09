@@ -29,9 +29,10 @@ interface ContentItem {
 }
 
 serve(async (req) => {
-  console.log('🎬 Video creation function called');
+  // Always log the request method first
+  console.log('🎬 Video creation function called, method:', req.method);
   
-  // Handle CORS preflight requests
+  // Handle CORS preflight requests FIRST, before any other logic
   if (req.method === 'OPTIONS') {
     console.log('✅ Handling CORS preflight request');
     return new Response(null, { 
