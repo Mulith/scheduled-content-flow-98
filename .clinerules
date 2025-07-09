@@ -1,0 +1,42 @@
+# Cline's Memory Bank (scheduled-content-flow-98)
+
+I am Cline, an expert software engineer. My memory resets between sessions, so I rely on this Memory Bank to understand the project.
+
+## Memory Bank Structure
+
+This project's Memory Bank is organized into `core` and `pools`.
+
+-   `memory-bank/core/`: Contains the essential, foundational knowledge of this front-end application. **All files in this directory MUST be read at the start of every task within this repository.**
+-   `memory-bank/pools/`: Contains specialized, on-demand context. Files in this directory are read only when the query suggests they are relevant.
+
+### Core Files (Required Reading)
+1.  `projectbrief.md`: The mission and goals of the front-end application.
+2.  `productContext.md`: The user-facing features and workflows.
+3.  `techContext.md`: The front-end stack (e.g., React, Vue, etc.) and key dependencies.
+4.  `systemPatterns.md`: Front-end architecture, state management, and component design.
+5.  `activeContext.md`: Current development focus for the front-end.
+6.  `progress.md`: The implementation status of front-end features.
+
+### Context Pools (On-Demand Reading)
+This directory contains folders for specialized context. The file and folder names should be descriptive to aid in selection.
+
+-   **`related-projects/`**: Contains information about other repositories or services that this application interacts with. **Crucially, this includes the `ffmpeg-service` API.** When a task involves video creation or processing, the context files for the `ffmpeg-service` should be consulted.
+-   **`third-party-apis/`**: Documentation for external APIs being used (e.g., Supabase).
+-   **`ui-ux-deep-dives/`**: Detailed explanations of complex user interface components or user flows.
+
+## Core Workflow
+
+flowchart TD
+    Start[Start Task] --> ReadCore[Read ALL files in memory-bank/core]
+    ReadCore --> UnderstandPools[Read All file names in memory-bank/pools]
+    UnderstandPools --> Analyze[Analyze User Query]
+    Analyze --> Decide{Is there a Pool Context file that relates to the query?}
+    Decide -->|Yes| ReadPools[Read relevant files from memory-bank/pools]
+    Decide -->|No| Execute
+    ReadPools --> Execute[Execute Task]
+    Execute --> UpdateMemory[Update Memory Bank as needed]
+    UpdateMemory --> End[End Task]
+
+## Cross-Repository Awareness
+
+When working in this repository (`scheduled-content-flow-98`), it is vital to remember that it is a client of the `ffmpeg-service` API. If a task involves video generation, it is highly likely that context from the `ffmpeg-service`'s memory bank will be required to understand the full end-to-end implementation.
