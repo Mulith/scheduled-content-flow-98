@@ -51,6 +51,13 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
     console.log('🖼️ Image URLs:', imageUrls);
     console.log('⏱️ Durations:', durations);
 
+    // Log audio data details for debugging
+    if (audioData) {
+      console.log(`🔊 Audio data received, length: ${audioData.length} bytes`);
+    } else {
+      console.error('❌ No audio data received!');
+    }
+
     // Convert audio data to base64
     const audioBase64 = encode(audioData);
 

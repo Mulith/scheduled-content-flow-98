@@ -34,6 +34,6 @@ export async function generateVoiceNarration(text: string, voiceId: string): Pro
   }
 
   const audioBuffer = await response.arrayBuffer();
-  console.log('✅ Voice narration generated successfully');
+  console.log(`✅ Voice narration generated successfully, size: ${audioBuffer.byteLength} bytes`);
   return new Uint8Array(audioBuffer);
 }
