@@ -58,8 +58,8 @@ export const useChannelData = () => {
         // Get video style information
         const videoStyle = availableVideoStyles.find(v => v.id === dbChannel.selected_video_types[0]);
         
-        // Parse themes from selected_themes if it exists, otherwise default to empty array
-        const themes = Array.isArray(dbChannel.selected_themes) ? dbChannel.selected_themes : [];
+        // Since selected_themes doesn't exist in the database yet, use empty array as default
+        const themes: string[] = [];
         
         return {
           id: dbChannel.id,
