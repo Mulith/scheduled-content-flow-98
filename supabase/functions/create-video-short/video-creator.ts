@@ -1,5 +1,5 @@
 
-import { encode } from "https://deno.land/std@0.224.0/encoding/base64.ts";
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 
 interface Scene {
   scene_number: number;
@@ -59,7 +59,7 @@ export async function createVideoWithExternalFFmpeg(scenes: Scene[], audioData: 
     }
 
     // Convert audio data to base64
-    const audioBase64 = encode(audioData);
+    const audioBase64 = encodeBase64(audioData);
 
     const payload = {
       imageUrls,
